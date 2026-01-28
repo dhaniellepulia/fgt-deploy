@@ -1,0 +1,468 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Role {
+  roleID          BigInt  @id @default(autoincrement()) @map("roleID")
+  roleName        String  @unique @map("roleName")
+  roleDescription String? @map("roleDescription")
+  isActive        Boolean @default(true) @map("isActive")
+  createdAt       DateTime @default(now()) @map("createdAt")
+  updatedAt       DateTime @updatedAt @map("updatedAt")
+
+  users User[]
+
+  @@map("tbl_roles")
+}
+
+model CommunitySetting {
+  communitySettingID Int    @id @map("communitySettingID")
+  settingName         String @unique @map("settingName")
+  description         String? @map("description")
+  createdAt           DateTime @default(now()) @map("createdAt")
+  updatedAt           DateTime @updatedAt @map("updatedAt")
+
+  users User[]
+
+  @@map("tbl_community_settings")
+}
+
+model UserStatus {
+  userStatusID Int    @id @default(autoincrement()) @map("userStatusID")
+  statusName   String @unique @map("statusName")
+  description  String? @map("description")
+  createdAt    DateTime @default(now()) @map("createdAt")
+  updatedAt    DateTime @updatedAt @map("updatedAt")
+
+  users User[]
+
+  @@map("tbl_user_statuses")
+}
+
+model PlatformLanguage {
+  platformLanguageID Int    @id @default(autoincrement()) @map("platformLanguageID")
+  languageCode       String @unique @map("languageCode")
+  languageName       String @map("languageName")
+  isActive           Boolean @default(true) @map("isActive")
+  sortOrder          Int? @map("sortOrder")
+  createdAt          DateTime @default(now()) @map("createdAt")
+  updatedAt          DateTime @updatedAt @map("updatedAt")
+
+  users User[]
+
+  @@map("tbl_platform_languages")
+}
+
+model User {
+  userID              BigInt  @id @default(autoincrement()) @map("userID")
+  email               String  @unique @map("email")
+  passwordHash        String  @map("passwordHash")
+  isEmailVerified     Boolean @default(false) @map("isEmailVerified")
+  emailVerifiedAt     DateTime? @map("emailVerifiedAt")
+
+  roleID              BigInt @map("roleID")
+  userStatusID        Int @map("userStatusID")
+  communitySettingID  Int @default(0) @map("communitySettingID")
+
+  firstName           String? @map("firstName")
+  lastName            String? @map("lastName")
+  phoneNumber         String? @map("phoneNumber")
+  discordID           String? @map("discordID")
+  platformLanguageID  Int? @map("platformLanguageID")
+  birthdate           DateTime? @db.Date @map("birthdate")
+  countryOriginCode   String? @map("countryOriginCode")
+  countryResidenceCode String? @map("countryResidenceCode")
+  gender              String? @map("gender")
+  spokenLanguages     String[] @map("spokenLanguages")
+  experienceLevel     String? @map("experienceLevel")
+  recentGameID        BigInt? @map("recentGameID")
+
+  lastLoginAt         DateTime? @map("lastLoginAt")
+  onboardingProfileCompleted Boolean @default(false) @map("onboardingProfileCompleted")
+  onboardingQuestionnaireCompleted Boolean @default(false) @map("onboardingQuestionnaireCompleted")
+  onboardingClientCompleted Boolean @default(false) @map("onboardingClientCompleted")
+
+  createdAt           DateTime @default(now()) @map("createdAt")
+  updatedAt           DateTime @updatedAt @map("updatedAt")
+  deletedAt           DateTime? @map("deletedAt")
+
+  role             Role             @relation(fields: [roleID], references: [roleID])
+  userStatus       UserStatus       @relation(fields: [userStatusID], references: [userStatusID])
+  communitySetting CommunitySetting @relation(fields: [communitySettingID], references: [communitySettingID])
+  platformLanguage PlatformLanguage? @relation(fields: [platformLanguageID], references: [platformLanguageID])
+
+  questionnaires  Questionnaire[] @relation("QuestionnaireClient")
+  projects        Project[]
+  responses       QuestionnaireResponse[]
+  pointTransactions PointTransaction[]
+  pointBalance    UserPointBalance?
+  rewardRedemptions RewardRedemption[]
+  recentGame      Game? @relation(fields: [recentGameID], references: [gameID])
+  genreSelections UserGameGenre[]
+
+  @@map("tbl_users")
+}
+
+model GameGenre {
+  gameGenreID Int @id @default(autoincrement()) @map("gameGenreID")
+  name        String @unique @map("name")
+  sortOrder   Int? @map("sortOrder")
+  createdAt   DateTime @default(now()) @map("createdAt")
+  updatedAt   DateTime @updatedAt @map("updatedAt")
+
+  users UserGameGenre[]
+
+  @@map("tbl_game_genres")
+}
+
+model Game {
+  gameID     BigInt @id @default(autoincrement()) @map("gameID")
+  name       String @unique @map("name")
+  platforms  String? @map("platforms")
+  isActive   Boolean @default(true) @map("isActive")
+  createdAt  DateTime @default(now()) @map("createdAt")
+  updatedAt  DateTime @updatedAt @map("updatedAt")
+
+  recentPlayers User[]
+
+  @@map("tbl_games")
+}
+
+model UserGameGenre {
+  userGameGenreID BigInt @id @default(autoincrement()) @map("userGameGenreID")
+  userID          BigInt @map("userID")
+  gameGenreID     Int @map("gameGenreID")
+  createdAt       DateTime @default(now()) @map("createdAt")
+  updatedAt       DateTime @updatedAt @map("updatedAt")
+
+  user  User @relation(fields: [userID], references: [userID])
+  genre GameGenre @relation(fields: [gameGenreID], references: [gameGenreID])
+
+  @@unique([userID, gameGenreID], map: "uq_user_genre")
+  @@map("tbl_user_game_genres")
+}
+
+model Project {
+  projectID     BigInt @id @default(autoincrement()) @map("projectID")
+  clientUserID  BigInt @map("clientUserID")
+
+  title         String @map("title")
+  description   String? @db.Text @map("description")
+  gameTitle     String? @map("gameTitle")
+  gameGenre     String? @map("gameGenre")
+  gamePlatforms String? @map("gamePlatforms")
+  gameVersion   String? @map("gameVersion")
+  gameNotes     String? @db.Text @map("gameNotes")
+
+  createdAt     DateTime @default(now()) @map("createdAt")
+  updatedAt     DateTime @updatedAt @map("updatedAt")
+  deletedAt     DateTime? @map("deletedAt")
+
+  client        User @relation(fields: [clientUserID], references: [userID])
+  questionnaires Questionnaire[]
+
+  @@map("tbl_projects")
+}
+
+model QuestionnaireStatus {
+  questionnaireStatusID Int    @id @default(autoincrement()) @map("questionnaireStatusID")
+  statusName            String @unique @map("statusName")
+  sortOrder             Int? @map("sortOrder")
+  createdAt             DateTime @default(now()) @map("createdAt")
+  updatedAt             DateTime @updatedAt @map("updatedAt")
+
+  questionnaires Questionnaire[]
+
+  @@map("tbl_questionnaire_statuses")
+}
+
+model Questionnaire {
+  questionnaireID BigInt @id @default(autoincrement()) @map("questionnaireID")
+  clientUserID    BigInt @map("clientUserID")
+  projectID       BigInt? @map("projectID")
+
+  title           String @map("title")
+  description     String? @db.Text @map("description")
+
+  statusID        Int @map("statusID")
+  publishedAt     DateTime? @map("publishedAt")
+
+  startsAt        DateTime? @map("startsAt")
+  endsAt          DateTime? @map("endsAt")
+  timeLimitSeconds Int? @map("timeLimitSeconds")
+  maxResponses    Int? @map("maxResponses")
+  pointsReward    Int @default(0) @map("pointsReward")
+
+  createdAt       DateTime @default(now()) @map("createdAt")
+  updatedAt       DateTime @updatedAt @map("updatedAt")
+  deletedAt       DateTime? @map("deletedAt")
+
+  client   User                @relation("QuestionnaireClient", fields: [clientUserID], references: [userID])
+  project  Project?            @relation(fields: [projectID], references: [projectID])
+  status   QuestionnaireStatus @relation(fields: [statusID], references: [questionnaireStatusID])
+  questions Question[]
+  responses QuestionnaireResponse[]
+  criteria  QuestionnaireCriteria[]
+
+  @@map("tbl_questionnaires")
+}
+
+model QuestionType {
+  questionTypeID Int    @id @default(autoincrement()) @map("questionTypeID")
+  typeCode       String @unique @map("typeCode")
+  typeName       String @map("typeName")
+  createdAt      DateTime @default(now()) @map("createdAt")
+  updatedAt      DateTime @updatedAt @map("updatedAt")
+
+  questions Question[]
+
+  @@map("tbl_question_types")
+}
+
+model Question {
+  questionID       BigInt @id @default(autoincrement()) @map("questionID")
+  questionnaireID  BigInt @map("questionnaireID")
+  questionTypeID   Int @map("questionTypeID")
+
+  questionText     String @db.Text @map("questionText")
+  helpText         String? @db.Text @map("helpText")
+
+  isRequired       Boolean @default(false) @map("isRequired")
+  displayOrder     Int @map("displayOrder")
+
+  minSelections    Int? @map("minSelections")
+  maxSelections    Int? @map("maxSelections")
+  minValue         Decimal? @db.Decimal @map("minValue")
+  maxValue         Decimal? @db.Decimal @map("maxValue")
+  stepValue        Decimal? @db.Decimal @map("stepValue")
+  placeholderText  String? @map("placeholderText")
+
+  createdAt        DateTime @default(now()) @map("createdAt")
+  updatedAt        DateTime @updatedAt @map("updatedAt")
+  deletedAt        DateTime? @map("deletedAt")
+
+  questionnaire Questionnaire @relation(fields: [questionnaireID], references: [questionnaireID])
+  questionType   QuestionType @relation(fields: [questionTypeID], references: [questionTypeID])
+  options        QuestionOption[]
+  answers        QuestionAnswer[]
+
+  @@map("tbl_questions")
+}
+
+model QuestionOption {
+  questionOptionID BigInt @id @default(autoincrement()) @map("questionOptionID")
+  questionID       BigInt @map("questionID")
+
+  optionText       String @map("optionText")
+  optionValue      String? @map("optionValue")
+  displayOrder     Int @map("displayOrder")
+  isOtherOption    Boolean @default(false) @map("isOtherOption")
+
+  createdAt        DateTime @default(now()) @map("createdAt")
+  updatedAt        DateTime @updatedAt @map("updatedAt")
+  deletedAt        DateTime? @map("deletedAt")
+
+  question      Question @relation(fields: [questionID], references: [questionID])
+  answers       QuestionAnswer[]
+  answerOptions QuestionAnswerOption[]
+
+  @@map("tbl_question_options")
+}
+
+model QuestionnaireCriteria {
+  questionnaireCriteriaID BigInt @id @default(autoincrement()) @map("questionnaireCriteriaID")
+  questionnaireID         BigInt @map("questionnaireID")
+  criterionType           String @map("criterionType")
+  matchType               String @map("matchType")
+  valueJson               Json   @map("valueJson")
+  createdAt               DateTime @default(now()) @map("createdAt")
+  updatedAt               DateTime @updatedAt @map("updatedAt")
+
+  questionnaire Questionnaire @relation(fields: [questionnaireID], references: [questionnaireID])
+
+  @@map("tbl_questionnaire_criteria")
+}
+
+model ResponseStatus {
+  responseStatusID Int    @id @default(autoincrement()) @map("responseStatusID")
+  statusName       String @unique @map("statusName")
+  sortOrder        Int? @map("sortOrder")
+  createdAt        DateTime @default(now()) @map("createdAt")
+  updatedAt        DateTime @updatedAt @map("updatedAt")
+
+  responses QuestionnaireResponse[]
+
+  @@map("tbl_response_statuses")
+}
+
+model QuestionnaireResponse {
+  questionnaireResponseID BigInt @id @default(autoincrement()) @map("questionnaireResponseID")
+  questionnaireID         BigInt @map("questionnaireID")
+  testerUserID            BigInt @map("testerUserID")
+
+  responseStatusID        Int @map("responseStatusID")
+  startedAt               DateTime @map("startedAt")
+  submittedAt             DateTime? @map("submittedAt")
+
+  ipAddress               String? @map("ipAddress")
+  userAgent               String? @db.Text @map("userAgent")
+
+  createdAt               DateTime @default(now()) @map("createdAt")
+  updatedAt               DateTime @updatedAt @map("updatedAt")
+
+  questionnaire  Questionnaire @relation(fields: [questionnaireID], references: [questionnaireID])
+  tester         User @relation(fields: [testerUserID], references: [userID])
+  responseStatus ResponseStatus @relation(fields: [responseStatusID], references: [responseStatusID])
+  answers        QuestionAnswer[]
+  pointTransactions PointTransaction[]
+
+  @@index([questionnaireID, testerUserID], map: "idx_response_q_tester")
+  @@map("tbl_questionnaire_responses")
+}
+
+model QuestionAnswer {
+  questionAnswerID         BigInt @id @default(autoincrement()) @map("questionAnswerID")
+  questionnaireResponseID  BigInt @map("questionnaireResponseID")
+  questionID               BigInt @map("questionID")
+
+  answerText               String? @db.Text @map("answerText")
+  answerNumber             Decimal? @db.Decimal @map("answerNumber")
+  answerDate               DateTime? @db.Date @map("answerDate")
+  selectedOptionID         BigInt? @map("selectedOptionID")
+  otherText                String? @db.Text @map("otherText")
+
+  createdAt                DateTime @default(now()) @map("createdAt")
+  updatedAt                DateTime @updatedAt @map("updatedAt")
+
+  questionnaireResponse QuestionnaireResponse @relation(fields: [questionnaireResponseID], references: [questionnaireResponseID])
+  question             Question @relation(fields: [questionID], references: [questionID])
+  selectedOption       QuestionOption? @relation(fields: [selectedOptionID], references: [questionOptionID])
+  multiOptions         QuestionAnswerOption[]
+
+  @@unique([questionnaireResponseID, questionID], map: "uq_answer_response_question")
+  @@map("tbl_question_answers")
+}
+
+model QuestionAnswerOption {
+  questionAnswerOptionID BigInt @id @default(autoincrement()) @map("questionAnswerOptionID")
+  questionAnswerID       BigInt @map("questionAnswerID")
+  questionOptionID       BigInt @map("questionOptionID")
+
+  createdAt              DateTime @default(now()) @map("createdAt")
+  updatedAt              DateTime @updatedAt @map("updatedAt")
+
+  questionAnswer QuestionAnswer @relation(fields: [questionAnswerID], references: [questionAnswerID])
+  questionOption QuestionOption @relation(fields: [questionOptionID], references: [questionOptionID])
+
+  @@unique([questionAnswerID, questionOptionID], map: "uq_answeroption")
+  @@map("tbl_question_answer_options")
+}
+
+model PointTransactionType {
+  pointTransactionTypeID Int    @id @default(autoincrement()) @map("pointTransactionTypeID")
+  typeCode               String @unique @map("typeCode")
+  typeName               String @map("typeName")
+  isActive               Boolean @default(true) @map("isActive")
+  createdAt              DateTime @default(now()) @map("createdAt")
+  updatedAt              DateTime @updatedAt @map("updatedAt")
+
+  transactions PointTransaction[]
+
+  @@map("tbl_point_transaction_types")
+}
+
+model PointTransaction {
+  pointTransactionID     BigInt @id @default(autoincrement()) @map("pointTransactionID")
+  userID                 BigInt @map("userID")
+  pointTransactionTypeID Int @map("pointTransactionTypeID")
+
+  pointsDelta            Int @map("pointsDelta")
+
+  questionnaireResponseID BigInt? @map("questionnaireResponseID")
+  rewardRedemptionID     BigInt? @map("rewardRedemptionID")
+
+  description            String? @map("description")
+
+  createdAt              DateTime @default(now()) @map("createdAt")
+  updatedAt              DateTime @updatedAt @map("updatedAt")
+
+  user             User @relation(fields: [userID], references: [userID])
+  transactionType  PointTransactionType @relation(fields: [pointTransactionTypeID], references: [pointTransactionTypeID])
+  questionnaireResponse QuestionnaireResponse? @relation(fields: [questionnaireResponseID], references: [questionnaireResponseID])
+  rewardRedemption RewardRedemption? @relation(fields: [rewardRedemptionID], references: [rewardRedemptionID])
+
+  @@index([userID, createdAt], map: "idx_points_user_created")
+  @@map("tbl_point_transactions")
+}
+
+model UserPointBalance {
+  userPointBalanceID   BigInt @id @default(autoincrement()) @map("userPointBalanceID")
+  userID               BigInt @unique @map("userID")
+  currentPoints        Int @default(0) @map("currentPoints")
+  lifetimeEarnedPoints Int @default(0) @map("lifetimeEarnedPoints")
+  lifetimeSpentPoints  Int @default(0) @map("lifetimeSpentPoints")
+  updatedAt            DateTime @updatedAt @map("updatedAt")
+
+  user User @relation(fields: [userID], references: [userID])
+
+  @@map("tbl_user_point_balances")
+}
+
+model Reward {
+  rewardID          BigInt @id @default(autoincrement()) @map("rewardID")
+  rewardName        String @map("rewardName")
+  rewardDescription String? @db.Text @map("rewardDescription")
+  pointsCost        Int @map("pointsCost")
+  stockQty          Int? @map("stockQty")
+  isActive          Boolean @default(true) @map("isActive")
+  sortOrder         Int? @map("sortOrder")
+  createdAt         DateTime @default(now()) @map("createdAt")
+  updatedAt         DateTime @updatedAt @map("updatedAt")
+
+  redemptions RewardRedemption[]
+
+  @@map("tbl_rewards")
+}
+
+model RewardRedemptionStatus {
+  rewardRedemptionStatusID Int    @id @default(autoincrement()) @map("rewardRedemptionStatusID")
+  statusName               String @unique @map("statusName")
+  sortOrder                Int? @map("sortOrder")
+  createdAt                DateTime @default(now()) @map("createdAt")
+  updatedAt                DateTime @updatedAt @map("updatedAt")
+
+  redemptions RewardRedemption[]
+
+  @@map("tbl_reward_redemption_statuses")
+}
+
+model RewardRedemption {
+  rewardRedemptionID       BigInt @id @default(autoincrement()) @map("rewardRedemptionID")
+  userID                   BigInt @map("userID")
+  rewardID                 BigInt @map("rewardID")
+
+  pointsCostAtRedemption   Int @map("pointsCostAtRedemption")
+  rewardNameAtRedemption   String @map("rewardNameAtRedemption")
+
+  rewardRedemptionStatusID Int @map("rewardRedemptionStatusID")
+  requestedAt              DateTime @map("requestedAt")
+  fulfilledAt              DateTime? @map("fulfilledAt")
+
+  notes                    String? @db.Text @map("notes")
+
+  createdAt                DateTime @default(now()) @map("createdAt")
+  updatedAt                DateTime @updatedAt @map("updatedAt")
+
+  user   User @relation(fields: [userID], references: [userID])
+  reward Reward @relation(fields: [rewardID], references: [rewardID])
+  status RewardRedemptionStatus @relation(fields: [rewardRedemptionStatusID], references: [rewardRedemptionStatusID])
+  pointTransactions PointTransaction[]
+
+  @@index([userID, requestedAt], map: "idx_redemptions_user_requested")
+  @@map("tbl_reward_redemptions")
+}

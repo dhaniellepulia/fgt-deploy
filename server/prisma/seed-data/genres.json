@@ -1,0 +1,23 @@
+[
+  { "name": "Action", "sortOrder": 1 },
+  { "name": "Adventure", "sortOrder": 2 },
+  { "name": "RPG", "sortOrder": 3 },
+  { "name": "Strategy", "sortOrder": 4 },
+  { "name": "Shooter", "sortOrder": 5 },
+  { "name": "Simulation", "sortOrder": 6 },
+  { "name": "Sports", "sortOrder": 7 },
+  { "name": "Racing", "sortOrder": 8 },
+  { "name": "Puzzle", "sortOrder": 9 },
+  { "name": "Platformer", "sortOrder": 10 },
+  { "name": "MMO", "sortOrder": 11 },
+  { "name": "MOBA", "sortOrder": 12 },
+  { "name": "Battle Royale", "sortOrder": 13 },
+  { "name": "Fighting", "sortOrder": 14 },
+  { "name": "Survival", "sortOrder": 15 },
+  { "name": "Sandbox", "sortOrder": 16 },
+  { "name": "Roguelike", "sortOrder": 17 },
+  { "name": "Horror", "sortOrder": 18 },
+  { "name": "Casual", "sortOrder": 19 },
+  { "name": "Card/CCG", "sortOrder": 20 },
+  { "name": "Music/Rhythm", "sortOrder": 21 }
+]

@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: fgt_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: fgt_website
+      POSTGRES_USER: fgt_user
+      POSTGRES_PASSWORD: fgt_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - fgt_postgres_data:/var/lib/postgresql/data
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: fgt_server
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://fgt_user:fgt_password@postgres:5432/fgt_website
+      JWT_SECRET: change-me
+      DEFAULT_ROLE_ID: 2
+      DEFAULT_USER_STATUS_ID: 1
+      DEFAULT_COMMUNITY_SETTING_ID: 0
+    depends_on:
+      - postgres
+    ports:
+      - "4000:4000"
+
+volumes:
+  fgt_postgres_data:
