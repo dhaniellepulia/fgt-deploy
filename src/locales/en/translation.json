@@ -1,0 +1,26 @@
+{
+  "login": {
+    "main_title": "Let's get you signed in.",
+    "label_username": "Username",
+    "label_password": "Password",
+    "label_keep_me_logged_in": "Keep me logged in",
+    "label_forgot_password": "Forgot Password?",
+    "button_signin": "Sign In",
+    "label_continue_with": "Or Continue with",
+    "button_phone": "Phone Number",
+    "button_email": "Email Address",
+    "label_new": "New to PNE?",
+    "button_signup": "Sign Up Now"
+  },
+  "signup": {
+    "main_title": "Sign up to get rewarded.",
+    "label_username": "Username",
+    "label_password": "Password",
+    "label_fullname": "Full name",
+    "label_country": "Country of residence",
+    "button_signup": "Sign up",
+    "label_member": "Already a member?",
+    "button_signin": "Sign in"
+  },
+  "button_contact": "Contact Us"
+}

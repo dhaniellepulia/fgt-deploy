@@ -1,0 +1,26 @@
+{
+  "login": {
+    "main_title": "test language.",
+    "label_username": "test",
+    "label_password": "Password",
+    "label_keep_me_logged_in": "Keep me logged in",
+    "label_forgot_password": "Forgot Password?",
+    "button_signin": "Sign In",
+    "label_continue_with": "Or Continue with",
+    "button_phone": "Phone Number",
+    "button_email": "Email Address",
+    "label_new": "New to PNE?",
+    "button_signup": "Sign Up Now"
+  },
+  "signup": {
+    "main_title": "test korean",
+    "label_username": "test",
+    "label_password": "Password",
+    "label_fullname": "Full name",
+    "label_country": "Country of residence",
+    "button_signup": "Sign up",
+    "label_member": "Already a member?",
+    "button_signin": "Sign in"
+  },
+  "button_contact": "Test Contact Us"
+}
