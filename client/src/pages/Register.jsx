@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 import LanguageSelector from "../components/LanguageSelector";
 import { useAuth } from "../auth/AuthContext";
+import { countries } from "../data/countries";
 
 function Register() {
   const { t } = useTranslation();
@@ -144,8 +145,12 @@ function Register() {
                   required
                   className="mt-1 w-full px-3 py-3 border bg-white text-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="KR">South Korea</option>
-                  <option value="US">United States</option>
+                  <option value="">Select a country</option>
+                  {countries.map((country) => (
+                    <option key={country.code} value={country.code}>
+                      {country.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 

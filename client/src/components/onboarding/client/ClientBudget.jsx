@@ -50,7 +50,7 @@ function ClientBudget() {
         <div className="flex justify-between mt-10">
           <button
             onClick={() => navigate("/onboarding/client/questionnaires")}
-            className="text-neutral-400 hover:text-white"
+            className="bg-gradient-to-b from-blue-500 to-blue-700 text-white font-bold py-2.5 px-10 rounded-md hover:from-blue-400 hover:to-blue-600 transition-all"
           >
             Back
           </button>

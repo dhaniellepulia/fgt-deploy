@@ -602,335 +602,25 @@ function ClientQuestionnaireBuilder() {
           </div>
         </section>
 
+
         <section className="bg-[#252525] rounded-xl p-6">
-          <h4 className="font-semibold mb-4">Questions</h4>
-          {orderedQuestions.length ? (
-            <div className="space-y-4">
-              {orderedQuestions.map((q, index) => (
-                <div
-                  key={q.questionID}
-                  className={`border rounded-lg p-4 ${
-                    editingQuestionID === q.questionID
-                      ? "border-yellow-400"
-                      : "border-neutral-800"
-                  }`}
+          <h4 className="font-semibold mb-4">Playtester Criteria</h4>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="bg-[#1f1f1f] rounded-lg p-3">
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-xs font-semibold">Gender</label>
+                <select
+                  value={criteria.gender.matchType}
+                  onChange={(e) =>
+                    handleCriteriaChange("gender", { matchType: e.target.value })
+                  }
+                  className="bg-white text-black rounded px-2 py-1 text-xs"
                 >
-                  <div className="flex justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="font-semibold">{q.questionText}</p>
-                        <span className="text-xs text-neutral-400">
-                          {getQuestionTypeLabel(q.questionTypeID)}
-                        </span>
-                      </div>
-                      <p className="text-xs text-neutral-400">
-                        Order {q.displayOrder} ·{" "}
-                        {q.isRequired ? "Required" : "Optional"}
-                      </p>
-                      {q.helpText && (
-                        <p className="text-xs text-neutral-300 mt-1">
-                          {q.helpText}
-                        </p>
-                      )}
-                      {q.placeholderText && (
-                        <p className="text-xs text-neutral-500">
-                          Placeholder: {q.placeholderText}
-                        </p>
-                      )}
-                      {(q.minSelections ||
-                        q.maxSelections ||
-                        q.minValue ||
-                        q.maxValue ||
-                        q.stepValue) && (
-                        <p className="text-xs text-neutral-500 mt-1">
-                          Constraints:{" "}
-                          {[q.minSelections && `min select ${q.minSelections}`,
-                          q.maxSelections && `max select ${q.maxSelections}`,
-                          q.minValue && `min ${q.minValue}`,
-                          q.maxValue && `max ${q.maxValue}`,
-                          q.stepValue && `step ${q.stepValue}`]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </p>
-                      )}
-                      {q.options?.length > 0 && (
-                        <div className="mt-2 space-y-2">
-                          {q.options.map((option) => (
-                            <div
-                              key={option.questionOptionID}
-                              className="flex items-center gap-2"
-                            >
-                              <input
-                                value={
-                                  optionDrafts[option.questionOptionID] ??
-                                  option.optionText
-                                }
-                                onChange={(e) =>
-                                  handleOptionDraftChange(
-                                    option.questionOptionID,
-                                    e.target.value
-                                  )
-                                }
-                                className="bg-white text-black rounded p-1 text-xs flex-1"
-                              />
-                              <button
-                                onClick={() =>
-                                  handleSaveOption(option.questionOptionID)
-                                }
-                                className="text-xs text-yellow-400"
-                              >
-                                Save
-                              </button>
-                              <button
-                                onClick={() =>
-                                  handleDeleteOption(option.questionOptionID)
-                                }
-                                className="text-xs text-red-400"
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {(Number(q.questionTypeID) === 3 ||
-                        Number(q.questionTypeID) === 4) && (
-                        <div className="mt-2 flex items-start gap-2">
-                          <textarea
-                            value={newOptionDrafts[q.questionID] || ""}
-                            onChange={(e) =>
-                              handleNewOptionDraftChange(
-                                q.questionID,
-                                e.target.value
-                              )
-                            }
-                            className="bg-white text-black rounded p-1 text-xs flex-1 min-h-[48px]"
-                            placeholder="Add option (one per line)"
-                          />
-                          <button
-                            onClick={() => handleAddOption(q)}
-                            className="text-xs text-yellow-400 mt-1"
-                          >
-                            Add
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleReorderQuestion(q.questionID, "up")}
-                          disabled={index === 0 || saving}
-                          className="text-xs text-neutral-400 disabled:opacity-50"
-                        >
-                          ↑
-                        </button>
-                        <button
-                          onClick={() => handleReorderQuestion(q.questionID, "down")}
-                          disabled={index === orderedQuestions.length - 1 || saving}
-                          className="text-xs text-neutral-400 disabled:opacity-50"
-                        >
-                          ↓
-                        </button>
-                      </div>
-                      <button
-                        onClick={() => handleEditQuestion(q)}
-                        className="text-xs text-yellow-400"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDeleteQuestion(q.questionID)}
-                        className="text-xs text-red-400"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-neutral-400">No questions yet.</p>
-          )}
-
-          <div className="mt-6 border-t border-neutral-800 pt-4">
-            <h5 className="font-semibold mb-3">
-              {isEditing ? "Edit Question" : "Add Question"}
-            </h5>
-            <div className="grid grid-cols-1 gap-3">
-              <label className="text-xs text-neutral-400">Question type</label>
-              <select
-                name="questionTypeID"
-                value={questionForm.questionTypeID}
-                onChange={handleQuestionChange}
-                className="bg-white text-black rounded p-2"
-              >
-                {questionTypes.map((type) => (
-                  <option key={type.id} value={type.id}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
-              <input
-                name="questionText"
-                value={questionForm.questionText}
-                onChange={handleQuestionChange}
-                className="bg-white text-black rounded p-2"
-                placeholder="Question text"
-              />
-              <textarea
-                name="helpText"
-                value={questionForm.helpText}
-                onChange={handleQuestionChange}
-                className="bg-white text-black rounded p-2"
-                placeholder="Help text (optional)"
-              />
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  name="isRequired"
-                  checked={questionForm.isRequired}
-                  onChange={handleQuestionChange}
-                />
-                Required
-              </label>
-              <input
-                name="placeholderText"
-                value={questionForm.placeholderText}
-                onChange={handleQuestionChange}
-                className="bg-white text-black rounded p-2"
-                placeholder="Placeholder text (optional)"
-              />
-              {(Number(questionForm.questionTypeID) === 3 ||
-                Number(questionForm.questionTypeID) === 4) && (
-                <div className="grid grid-cols-1 gap-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <input
-                      name="minSelections"
-                      value={questionForm.minSelections}
-                      onChange={handleQuestionChange}
-                      className="bg-white text-black rounded p-2"
-                      placeholder="Min selections"
-                    />
-                    <input
-                      name="maxSelections"
-                      value={questionForm.maxSelections}
-                      onChange={handleQuestionChange}
-                      className="bg-white text-black rounded p-2"
-                      placeholder="Max selections"
-                    />
-                  </div>
-                  {!isEditing ? (
-                    <textarea
-                      name="options"
-                      value={questionForm.options}
-                      onChange={handleQuestionChange}
-                      className="bg-white text-black rounded p-2"
-                      placeholder="Options (one per line)"
-                    />
-                  ) : (
-                    <textarea
-                      name="newOptions"
-                      value={questionForm.newOptions}
-                      onChange={handleQuestionChange}
-                      className="bg-white text-black rounded p-2"
-                      placeholder="Add new options (one per line)"
-                    />
-                  )}
-                </div>
-              )}
-              {(Number(questionForm.questionTypeID) === 5 ||
-                Number(questionForm.questionTypeID) === 6) && (
-                <div className="grid grid-cols-3 gap-3">
-                  <input
-                    name="minValue"
-                    value={questionForm.minValue}
-                    onChange={handleQuestionChange}
-                    className="bg-white text-black rounded p-2"
-                    placeholder="Min value"
-                  />
-                  <input
-                    name="maxValue"
-                    value={questionForm.maxValue}
-                    onChange={handleQuestionChange}
-                    className="bg-white text-black rounded p-2"
-                    placeholder="Max value"
-                  />
-                  <input
-                    name="stepValue"
-                    value={questionForm.stepValue}
-                    onChange={handleQuestionChange}
-                    className="bg-white text-black rounded p-2"
-                    placeholder="Step"
-                  />
-                </div>
-              )}
-              {isEditing ? (
-                <div className="flex gap-3">
-                  <button
-                    onClick={handleUpdateQuestion}
-                    disabled={saving}
-                    className="bg-yellow-400 text-black px-6 py-2 rounded font-semibold disabled:opacity-60"
-                  >
-                    {saving ? "Saving..." : "Update Question"}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setEditingQuestionID(null);
-                      setQuestionForm({
-                        questionTypeID: 1,
-                        questionText: "",
-                        helpText: "",
-                        isRequired: false,
-                        displayOrder:
-                          (questionnaire?.questions?.length || 0) + 1,
-                        options: "",
-                        newOptions: "",
-                        minSelections: "",
-                        maxSelections: "",
-                        minValue: "",
-                        maxValue: "",
-                        stepValue: "",
-                        placeholderText: "",
-                      });
-                    }}
-                    className="text-sm text-neutral-400"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={handleAddQuestion}
-                  disabled={saving}
-                  className="bg-yellow-400 text-black px-6 py-2 rounded font-semibold disabled:opacity-60"
-                >
-                  {saving ? "Saving..." : "Add Question"}
-                </button>
-              )}
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <section className="bg-[#252525] rounded-xl p-6 mt-6">
-        <h4 className="font-semibold mb-4">Playtester Criteria</h4>
-
-        <div className="space-y-4">
-          <div>
-            <label className="text-sm font-semibold">Gender</label>
-            <div className="flex items-center gap-2 mt-2">
-              <select
-                value={criteria.gender.matchType}
-                onChange={(e) =>
-                  handleCriteriaChange("gender", { matchType: e.target.value })
-                }
-                className="bg-white text-black rounded p-2"
-              >
-                <option>Priority</option>
-                <option>Requirement</option>
-              </select>
+                  <option>Priority</option>
+                  <option>Requirement</option>
+                </select>
+              </div>
               <select
                 multiple
                 value={criteria.gender.values}
@@ -941,7 +631,7 @@ function ClientQuestionnaireBuilder() {
                     ),
                   })
                 }
-                className="bg-white text-black rounded p-2 min-h-24 flex-1"
+                className="mt-2 bg-white text-black rounded p-2 text-sm min-h-16 w-full"
               >
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
@@ -949,57 +639,59 @@ function ClientQuestionnaireBuilder() {
                 <option value="Prefer not to say">Prefer not to say</option>
               </select>
             </div>
-          </div>
 
-          <div>
-            <label className="text-sm font-semibold">Age Range</label>
-            <div className="flex items-center gap-2 mt-2">
-              <select
-                value={criteria.age.matchType}
-                onChange={(e) =>
-                  handleCriteriaChange("age", { matchType: e.target.value })
-                }
-                className="bg-white text-black rounded p-2"
-              >
-                <option>Priority</option>
-                <option>Requirement</option>
-              </select>
-              <input
-                type="number"
-                placeholder="Min"
-                value={criteria.age.min}
-                onChange={(e) =>
-                  handleCriteriaChange("age", { min: e.target.value })
-                }
-                className="bg-white text-black rounded p-2 w-24"
-              />
-              <input
-                type="number"
-                placeholder="Max"
-                value={criteria.age.max}
-                onChange={(e) =>
-                  handleCriteriaChange("age", { max: e.target.value })
-                }
-                className="bg-white text-black rounded p-2 w-24"
-              />
+            <div className="bg-[#1f1f1f] rounded-lg p-3">
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-xs font-semibold">Age Range</label>
+                <select
+                  value={criteria.age.matchType}
+                  onChange={(e) =>
+                    handleCriteriaChange("age", { matchType: e.target.value })
+                  }
+                  className="bg-white text-black rounded px-2 py-1 text-xs"
+                >
+                  <option>Priority</option>
+                  <option>Requirement</option>
+                </select>
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <input
+                  type="number"
+                  placeholder="Min"
+                  value={criteria.age.min}
+                  onChange={(e) =>
+                    handleCriteriaChange("age", { min: e.target.value })
+                  }
+                  className="bg-white text-black rounded p-2 text-sm w-20"
+                />
+                <input
+                  type="number"
+                  placeholder="Max"
+                  value={criteria.age.max}
+                  onChange={(e) =>
+                    handleCriteriaChange("age", { max: e.target.value })
+                  }
+                  className="bg-white text-black rounded p-2 text-sm w-20"
+                />
+              </div>
             </div>
-          </div>
 
-          <div>
-            <label className="text-sm font-semibold">Location</label>
-            <div className="flex items-center gap-2 mt-2">
-              <select
-                value={criteria.location.matchType}
-                onChange={(e) =>
-                  handleCriteriaChange("location", {
-                    matchType: e.target.value,
-                  })
-                }
-                className="bg-white text-black rounded p-2"
-              >
-                <option>Priority</option>
-                <option>Requirement</option>
-              </select>
+            <div className="bg-[#1f1f1f] rounded-lg p-3">
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-xs font-semibold">Location</label>
+                <select
+                  value={criteria.location.matchType}
+                  onChange={(e) =>
+                    handleCriteriaChange("location", {
+                      matchType: e.target.value,
+                    })
+                  }
+                  className="bg-white text-black rounded px-2 py-1 text-xs"
+                >
+                  <option>Priority</option>
+                  <option>Requirement</option>
+                </select>
+              </div>
               <select
                 multiple
                 value={criteria.location.values}
@@ -1010,7 +702,7 @@ function ClientQuestionnaireBuilder() {
                     ),
                   })
                 }
-                className="bg-white text-black rounded p-2 min-h-24 flex-1"
+                className="mt-2 bg-white text-black rounded p-2 text-sm min-h-16 w-full"
               >
                 {countries.map((country) => (
                   <option key={country.code} value={country.code}>
@@ -1019,23 +711,23 @@ function ClientQuestionnaireBuilder() {
                 ))}
               </select>
             </div>
-          </div>
 
-          <div>
-            <label className="text-sm font-semibold">Language</label>
-            <div className="flex items-center gap-2 mt-2">
-              <select
-                value={criteria.language.matchType}
-                onChange={(e) =>
-                  handleCriteriaChange("language", {
-                    matchType: e.target.value,
-                  })
-                }
-                className="bg-white text-black rounded p-2"
-              >
-                <option>Priority</option>
-                <option>Requirement</option>
-              </select>
+            <div className="bg-[#1f1f1f] rounded-lg p-3">
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-xs font-semibold">Language</label>
+                <select
+                  value={criteria.language.matchType}
+                  onChange={(e) =>
+                    handleCriteriaChange("language", {
+                      matchType: e.target.value,
+                    })
+                  }
+                  className="bg-white text-black rounded px-2 py-1 text-xs"
+                >
+                  <option>Priority</option>
+                  <option>Requirement</option>
+                </select>
+              </div>
               <select
                 multiple
                 value={criteria.language.values}
@@ -1046,7 +738,7 @@ function ClientQuestionnaireBuilder() {
                     ),
                   })
                 }
-                className="bg-white text-black rounded p-2 min-h-24 flex-1"
+                className="mt-2 bg-white text-black rounded p-2 text-sm min-h-16 w-full"
               >
                 {[
                   "English",
@@ -1091,23 +783,23 @@ function ClientQuestionnaireBuilder() {
                 ))}
               </select>
             </div>
-          </div>
 
-          <div>
-            <label className="text-sm font-semibold">Preferred Genre</label>
-            <div className="flex items-center gap-2 mt-2">
-              <select
-                value={criteria.preferredGenre.matchType}
-                onChange={(e) =>
-                  handleCriteriaChange("preferredGenre", {
-                    matchType: e.target.value,
-                  })
-                }
-                className="bg-white text-black rounded p-2"
-              >
-                <option>Priority</option>
-                <option>Requirement</option>
-              </select>
+            <div className="bg-[#1f1f1f] rounded-lg p-3">
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-xs font-semibold">Preferred Genre</label>
+                <select
+                  value={criteria.preferredGenre.matchType}
+                  onChange={(e) =>
+                    handleCriteriaChange("preferredGenre", {
+                      matchType: e.target.value,
+                    })
+                  }
+                  className="bg-white text-black rounded px-2 py-1 text-xs"
+                >
+                  <option>Priority</option>
+                  <option>Requirement</option>
+                </select>
+              </div>
               <select
                 multiple
                 value={criteria.preferredGenre.values}
@@ -1118,7 +810,7 @@ function ClientQuestionnaireBuilder() {
                     ),
                   })
                 }
-                className="bg-white text-black rounded p-2 min-h-24 flex-1"
+                className="mt-2 bg-white text-black rounded p-2 text-sm min-h-16 w-full"
               >
                 {genres.map((genre) => (
                   <option key={genre.gameGenreID} value={genre.gameGenreID}>
@@ -1127,23 +819,23 @@ function ClientQuestionnaireBuilder() {
                 ))}
               </select>
             </div>
-          </div>
 
-          <div>
-            <label className="text-sm font-semibold">Recent Game</label>
-            <div className="flex items-center gap-2 mt-2">
-              <select
-                value={criteria.recentGame.matchType}
-                onChange={(e) =>
-                  handleCriteriaChange("recentGame", {
-                    matchType: e.target.value,
-                  })
-                }
-                className="bg-white text-black rounded p-2"
-              >
-                <option>Priority</option>
-                <option>Requirement</option>
-              </select>
+            <div className="bg-[#1f1f1f] rounded-lg p-3">
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-xs font-semibold">Recent Game</label>
+                <select
+                  value={criteria.recentGame.matchType}
+                  onChange={(e) =>
+                    handleCriteriaChange("recentGame", {
+                      matchType: e.target.value,
+                    })
+                  }
+                  className="bg-white text-black rounded px-2 py-1 text-xs"
+                >
+                  <option>Priority</option>
+                  <option>Requirement</option>
+                </select>
+              </div>
               <select
                 multiple
                 value={criteria.recentGame.values}
@@ -1154,7 +846,7 @@ function ClientQuestionnaireBuilder() {
                     ),
                   })
                 }
-                className="bg-white text-black rounded p-2 min-h-24 flex-1"
+                className="mt-2 bg-white text-black rounded p-2 text-sm min-h-16 w-full"
               >
                 {games.map((game) => (
                   <option key={game.gameID} value={game.gameID}>
@@ -1164,17 +856,326 @@ function ClientQuestionnaireBuilder() {
               </select>
             </div>
           </div>
+
+          <button
+            onClick={handleSaveCriteria}
+            disabled={saving}
+            className="mt-6 bg-yellow-400 text-black px-6 py-2 rounded font-semibold disabled:opacity-60"
+          >
+            {saving ? "Saving..." : "Save Criteria"}
+          </button>
+        </section>
+      </div>
+      <section className="bg-[#252525] rounded-xl p-6 mt-6">
+        <h4 className="font-semibold mb-4">Questions</h4>
+        <div className="mt-6 border-t border-neutral-800 pt-4">
+          <h5 className="font-semibold mb-3">
+            {isEditing ? "Edit Question" : "Add Question"}
+          </h5>
+          <div className="grid grid-cols-1 gap-3">
+            <label className="text-xs text-neutral-400">Question type</label>
+            <select
+              name="questionTypeID"
+              value={questionForm.questionTypeID}
+              onChange={handleQuestionChange}
+              className="bg-white text-black rounded p-2"
+            >
+              {questionTypes.map((type) => (
+                <option key={type.id} value={type.id}>
+                  {type.label}
+                </option>
+              ))}
+            </select>
+            <input
+              name="questionText"
+              value={questionForm.questionText}
+              onChange={handleQuestionChange}
+              className="bg-white text-black rounded p-2"
+              placeholder="Question text"
+            />
+            <textarea
+              name="helpText"
+              value={questionForm.helpText}
+              onChange={handleQuestionChange}
+              className="bg-white text-black rounded p-2"
+              placeholder="Help text (optional)"
+            />
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="isRequired"
+                checked={questionForm.isRequired}
+                onChange={handleQuestionChange}
+              />
+              Required
+            </label>
+            <input
+              name="placeholderText"
+              value={questionForm.placeholderText}
+              onChange={handleQuestionChange}
+              className="bg-white text-black rounded p-2"
+              placeholder="Placeholder text (optional)"
+            />
+            {(Number(questionForm.questionTypeID) === 3 ||
+              Number(questionForm.questionTypeID) === 4) && (
+              <div className="grid grid-cols-1 gap-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    name="minSelections"
+                    value={questionForm.minSelections}
+                    onChange={handleQuestionChange}
+                    className="bg-white text-black rounded p-2"
+                    placeholder="Min selections"
+                  />
+                  <input
+                    name="maxSelections"
+                    value={questionForm.maxSelections}
+                    onChange={handleQuestionChange}
+                    className="bg-white text-black rounded p-2"
+                    placeholder="Max selections"
+                  />
+                </div>
+                {!isEditing ? (
+                  <textarea
+                    name="options"
+                    value={questionForm.options}
+                    onChange={handleQuestionChange}
+                    className="bg-white text-black rounded p-2"
+                    placeholder="Options (one per line)"
+                  />
+                ) : (
+                  <textarea
+                    name="newOptions"
+                    value={questionForm.newOptions}
+                    onChange={handleQuestionChange}
+                    className="bg-white text-black rounded p-2"
+                    placeholder="Add new options (one per line)"
+                  />
+                )}
+              </div>
+            )}
+            {(Number(questionForm.questionTypeID) === 5 ||
+              Number(questionForm.questionTypeID) === 6) && (
+              <div className="grid grid-cols-3 gap-3">
+                <input
+                  name="minValue"
+                  value={questionForm.minValue}
+                  onChange={handleQuestionChange}
+                  className="bg-white text-black rounded p-2"
+                  placeholder="Min value"
+                />
+                <input
+                  name="maxValue"
+                  value={questionForm.maxValue}
+                  onChange={handleQuestionChange}
+                  className="bg-white text-black rounded p-2"
+                  placeholder="Max value"
+                />
+                <input
+                  name="stepValue"
+                  value={questionForm.stepValue}
+                  onChange={handleQuestionChange}
+                  className="bg-white text-black rounded p-2"
+                  placeholder="Step"
+                />
+              </div>
+            )}
+            {isEditing ? (
+              <div className="flex gap-3">
+                <button
+                  onClick={handleUpdateQuestion}
+                  disabled={saving}
+                  className="bg-yellow-400 text-black px-6 py-2 rounded font-semibold disabled:opacity-60"
+                >
+                  {saving ? "Saving..." : "Update Question"}
+                </button>
+                <button
+                  onClick={() => {
+                    setEditingQuestionID(null);
+                    setQuestionForm({
+                      questionTypeID: 1,
+                      questionText: "",
+                      helpText: "",
+                      isRequired: false,
+                      displayOrder:
+                        (questionnaire?.questions?.length || 0) + 1,
+                      options: "",
+                      newOptions: "",
+                      minSelections: "",
+                      maxSelections: "",
+                      minValue: "",
+                      maxValue: "",
+                      stepValue: "",
+                      placeholderText: "",
+                    });
+                  }}
+                  className="text-sm text-neutral-400"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleAddQuestion}
+                disabled={saving}
+                className="bg-yellow-400 text-black px-6 py-2 rounded font-semibold disabled:opacity-60"
+              >
+                {saving ? "Saving..." : "Add Question"}
+              </button>
+            )}
+          </div>
         </div>
+        {orderedQuestions.length ? (
+          <div className="space-y-4">
+            {orderedQuestions.map((q, index) => (
+              <div
+                key={q.questionID}
+                className={`border rounded-lg p-4 ${
+                  editingQuestionID === q.questionID
+                    ? "border-yellow-400"
+                    : "border-neutral-800"
+                }`}
+              >
+                <div className="flex justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-semibold">{q.questionText}</p>
+                      <span className="text-xs text-neutral-400">
+                        {getQuestionTypeLabel(q.questionTypeID)}
+                      </span>
+                    </div>
+                    <p className="text-xs text-neutral-400">
+                      Order {q.displayOrder} ·{" "}
+                      {q.isRequired ? "Required" : "Optional"}
+                    </p>
+                    {q.helpText && (
+                      <p className="text-xs text-neutral-300 mt-1">
+                        {q.helpText}
+                      </p>
+                    )}
+                    {q.placeholderText && (
+                      <p className="text-xs text-neutral-500">
+                        Placeholder: {q.placeholderText}
+                      </p>
+                    )}
+                    {(q.minSelections ||
+                      q.maxSelections ||
+                      q.minValue ||
+                      q.maxValue ||
+                      q.stepValue) && (
+                      <p className="text-xs text-neutral-500 mt-1">
+                        Constraints:{" "}
+                        {[q.minSelections && `min select ${q.minSelections}`,
+                        q.maxSelections && `max select ${q.maxSelections}`,
+                        q.minValue && `min ${q.minValue}`,
+                        q.maxValue && `max ${q.maxValue}`,
+                        q.stepValue && `step ${q.stepValue}`]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    )}
+                    {q.options?.length > 0 && (
+                      <div className="mt-2 space-y-2">
+                        {q.options.map((option) => (
+                          <div
+                            key={option.questionOptionID}
+                            className="flex items-center gap-2"
+                          >
+                            <input
+                              value={
+                                optionDrafts[option.questionOptionID] ??
+                                option.optionText
+                              }
+                              onChange={(e) =>
+                                handleOptionDraftChange(
+                                  option.questionOptionID,
+                                  e.target.value
+                                )
+                              }
+                              className="bg-white text-black rounded p-1 text-xs flex-1"
+                            />
+                            <button
+                              onClick={() =>
+                                handleSaveOption(option.questionOptionID)
+                              }
+                              className="text-xs text-yellow-400"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={() =>
+                                handleDeleteOption(option.questionOptionID)
+                              }
+                              className="text-xs text-red-400"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {(Number(q.questionTypeID) === 3 ||
+                      Number(q.questionTypeID) === 4) && (
+                      <div className="mt-2 flex items-start gap-2">
+                        <textarea
+                          value={newOptionDrafts[q.questionID] || ""}
+                          onChange={(e) =>
+                            handleNewOptionDraftChange(
+                              q.questionID,
+                              e.target.value
+                            )
+                          }
+                          className="bg-white text-black rounded p-1 text-xs flex-1 min-h-[48px]"
+                          placeholder="Add option (one per line)"
+                        />
+                        <button
+                          onClick={() => handleAddOption(q)}
+                          className="text-xs text-yellow-400 mt-1"
+                        >
+                          Add
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleReorderQuestion(q.questionID, "up")}
+                        disabled={index === 0 || saving}
+                        className="text-xs text-neutral-400 disabled:opacity-50"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        onClick={() => handleReorderQuestion(q.questionID, "down")}
+                        disabled={index === orderedQuestions.length - 1 || saving}
+                        className="text-xs text-neutral-400 disabled:opacity-50"
+                      >
+                        ↓
+                      </button>
+                    </div>
+                    <button
+                      onClick={() => handleEditQuestion(q)}
+                      className="text-xs text-yellow-400"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteQuestion(q.questionID)}
+                      className="text-xs text-red-400"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-neutral-400">No questions yet.</p>
+        )}
 
-        <button
-          onClick={handleSaveCriteria}
-          disabled={saving}
-          className="mt-6 bg-yellow-400 text-black px-6 py-2 rounded font-semibold disabled:opacity-60"
-        >
-          {saving ? "Saving..." : "Save Criteria"}
-        </button>
       </section>
-
       <div className="mt-8">
         <button
           onClick={() => navigate(`/client/projects/${projectId}`)}

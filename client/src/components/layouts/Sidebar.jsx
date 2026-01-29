@@ -101,7 +101,7 @@ function Sidebar() {
             closeMenu();
             logout();
           }}
-          className="flex items-center gap-2 text-lg font-medium hover:opacity-80"
+          className="flex items-center gap-2 text-lg font-semibold text-white bg-[#1b1f3a] px-6 py-3 rounded-full hover:bg-[#14182d] transition-colors"
         >
           <LogOut size={20} /> Logout
         </button>

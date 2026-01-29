@@ -163,121 +163,210 @@ function ClientProjectDetail() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <section className="bg-[#252525] rounded-xl p-6">
           <h4 className="font-semibold mb-4">Project Details</h4>
-          <div className="grid grid-cols-1 gap-3">
-            <input
-              name="title"
-              value={projectForm.title}
-              onChange={handleProjectInput}
-              className="bg-white text-black rounded p-2"
-              placeholder="Project title"
-            />
-            <input
-              name="gameTitle"
-              value={projectForm.gameTitle}
-              onChange={handleProjectInput}
-              className="bg-white text-black rounded p-2"
-              placeholder="Game title"
-            />
-            <input
-              name="gameGenre"
-              value={projectForm.gameGenre}
-              onChange={handleProjectInput}
-              className="bg-white text-black rounded p-2"
-              placeholder="Game genre"
-            />
-            <input
-              name="gamePlatforms"
-              value={projectForm.gamePlatforms}
-              onChange={handleProjectInput}
-              className="bg-white text-black rounded p-2"
-              placeholder="Platforms"
-            />
-            <input
-              name="gameVersion"
-              value={projectForm.gameVersion}
-              onChange={handleProjectInput}
-              className="bg-white text-black rounded p-2"
-              placeholder="Game version"
-            />
-            <textarea
-              name="description"
-              value={projectForm.description}
-              onChange={handleProjectInput}
-              className="bg-white text-black rounded p-2"
-              placeholder="Project description"
-            />
-            <textarea
-              name="gameNotes"
-              value={projectForm.gameNotes}
-              onChange={handleProjectInput}
-              className="bg-white text-black rounded p-2"
-              placeholder="Game notes"
-            />
+          <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
+              <label className="text-sm font-semibold md:pt-2">Project Title</label>
+              <input
+                name="title"
+                value={projectForm.title}
+                onChange={handleProjectInput}
+                className="md:col-span-2 w-full bg-white text-black rounded p-2"
+                placeholder="Project title"
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
+              <label className="text-sm font-semibold md:pt-2">Game Title</label>
+              <input
+                name="gameTitle"
+                value={projectForm.gameTitle}
+                onChange={handleProjectInput}
+                className="md:col-span-2 w-full bg-white text-black rounded p-2"
+                placeholder="Game title"
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
+              <label className="text-sm font-semibold md:pt-2">Game Genre</label>
+              <input
+                name="gameGenre"
+                value={projectForm.gameGenre}
+                onChange={handleProjectInput}
+                className="md:col-span-2 w-full bg-white text-black rounded p-2"
+                placeholder="Game genre"
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
+              <label className="text-sm font-semibold md:pt-2">Platforms</label>
+              <input
+                name="gamePlatforms"
+                value={projectForm.gamePlatforms}
+                onChange={handleProjectInput}
+                className="md:col-span-2 w-full bg-white text-black rounded p-2"
+                placeholder="Platforms"
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
+              <label className="text-sm font-semibold md:pt-2">Game Version</label>
+              <input
+                name="gameVersion"
+                value={projectForm.gameVersion}
+                onChange={handleProjectInput}
+                className="md:col-span-2 w-full bg-white text-black rounded p-2"
+                placeholder="Game version"
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
+              <label className="text-sm font-semibold md:pt-2">Description</label>
+              <textarea
+                name="description"
+                value={projectForm.description}
+                onChange={handleProjectInput}
+                className="md:col-span-2 w-full bg-white text-black rounded p-2"
+                placeholder="Project description"
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
+              <label className="text-sm font-semibold md:pt-2">Game Notes</label>
+              <textarea
+                name="gameNotes"
+                value={projectForm.gameNotes}
+                onChange={handleProjectInput}
+                className="md:col-span-2 w-full bg-white text-black rounded p-2"
+                placeholder="Game notes"
+              />
+            </div>
           </div>
           <button
             onClick={handleProjectSave}
             disabled={saving}
             className="mt-4 bg-yellow-400 text-black px-6 py-2 rounded font-semibold disabled:opacity-60"
           >
-            {saving ? "Saving..." : "Save Project"}
+            {saving ? "Saving..." : "Update Project"}
           </button>
         </section>
 
         <section className="bg-[#252525] rounded-xl p-6">
           <h4 className="font-semibold mb-4">Create Questionnaire</h4>
-          <div className="grid grid-cols-1 gap-3">
-            <input
-              name="title"
-              value={questionnaireForm.title}
-              onChange={handleQuestionnaireInput}
-              className="bg-white text-black rounded p-2"
-              placeholder="Questionnaire title"
-            />
-            <textarea
-              name="description"
-              value={questionnaireForm.description}
-              onChange={handleQuestionnaireInput}
-              className="bg-white text-black rounded p-2"
-              placeholder="Description"
-            />
-            <input
-              type="datetime-local"
-              name="startsAt"
-              value={questionnaireForm.startsAt}
-              onChange={handleQuestionnaireInput}
-              className="bg-white text-black rounded p-2"
-            />
-            <input
-              type="datetime-local"
-              name="endsAt"
-              value={questionnaireForm.endsAt}
-              onChange={handleQuestionnaireInput}
-              className="bg-white text-black rounded p-2"
-            />
-            <input
-              name="timeLimitSeconds"
-              value={questionnaireForm.timeLimitSeconds}
-              onChange={handleQuestionnaireInput}
-              className="bg-white text-black rounded p-2"
-              placeholder="Time limit (seconds)"
-            />
-            <input
-              name="maxResponses"
-              value={questionnaireForm.maxResponses}
-              onChange={handleQuestionnaireInput}
-              className="bg-white text-black rounded p-2"
-              placeholder="Max responses"
-            />
-            <select
-              name="statusID"
-              value={questionnaireForm.statusID}
-              onChange={handleQuestionnaireInput}
-              className="bg-white text-black rounded p-2"
-            >
-              <option value={1}>Draft</option>
-              <option value={2}>Published</option>
-              <option value={3}>Archived</option>
-            </select>
+          <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
+              <label className="text-sm font-semibold md:pt-2">Title</label>
+              <div className="md:col-span-2 space-y-1">
+              <input
+                name="title"
+                value={questionnaireForm.title}
+                onChange={handleQuestionnaireInput}
+                className="w-full bg-white text-black rounded p-2"
+                placeholder="e.g., Alpha Build Feedback"
+              />
+              <p className="text-xs text-neutral-400">
+                Short internal name to identify this questionnaire.
+              </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
+              <label className="text-sm font-semibold md:pt-2">
+                Description
+              </label>
+              <div className="md:col-span-2 space-y-1">
+              <textarea
+                name="description"
+                value={questionnaireForm.description}
+                onChange={handleQuestionnaireInput}
+                className="w-full bg-white text-black rounded p-2"
+                placeholder="Explain what you want testers to focus on."
+              />
+              <p className="text-xs text-neutral-400">
+                Shown to testers at the top of the questionnaire.
+              </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
+              <label className="text-sm font-semibold md:pt-2">Starts At</label>
+              <div className="md:col-span-2 space-y-1">
+              <input
+                type="datetime-local"
+                name="startsAt"
+                value={questionnaireForm.startsAt}
+                onChange={handleQuestionnaireInput}
+                className="w-full bg-white text-black rounded p-2"
+              />
+              <p className="text-xs text-neutral-400">
+                Optional. When the questionnaire becomes available.
+              </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
+              <label className="text-sm font-semibold md:pt-2">Ends At</label>
+              <div className="md:col-span-2 space-y-1">
+              <input
+                type="datetime-local"
+                name="endsAt"
+                value={questionnaireForm.endsAt}
+                onChange={handleQuestionnaireInput}
+                className="w-full bg-white text-black rounded p-2"
+              />
+              <p className="text-xs text-neutral-400">
+                Optional. When the questionnaire closes to new responses.
+              </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
+              <label className="text-sm font-semibold md:pt-2">
+                Time Limit
+              </label>
+              <div className="md:col-span-2 space-y-1">
+              <input
+                name="timeLimitSeconds"
+                value={questionnaireForm.timeLimitSeconds}
+                onChange={handleQuestionnaireInput}
+                className="w-full bg-white text-black rounded p-2"
+                placeholder="Seconds per response (leave blank for no limit)"
+              />
+              <p className="text-xs text-neutral-400">
+                Sets how long testers have to complete the questionnaire.
+              </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
+              <label className="text-sm font-semibold md:pt-2">
+                Max Responses
+              </label>
+              <div className="md:col-span-2 space-y-1">
+              <input
+                name="maxResponses"
+                value={questionnaireForm.maxResponses}
+                onChange={handleQuestionnaireInput}
+                className="w-full bg-white text-black rounded p-2"
+                placeholder="Maximum submissions (leave blank for unlimited)"
+              />
+              <p className="text-xs text-neutral-400">
+                Caps how many responses you want to collect.
+              </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
+              <label className="text-sm font-semibold md:pt-2">Status</label>
+              <div className="md:col-span-2 space-y-1">
+              <select
+                name="statusID"
+                value={questionnaireForm.statusID}
+                onChange={handleQuestionnaireInput}
+                className="w-full bg-white text-black rounded p-2"
+              >
+                <option value={1}>Draft</option>
+                <option value={2}>Published</option>
+                <option value={3}>Archived</option>
+              </select>
+              <p className="text-xs text-neutral-400">
+                Draft is private, Published is visible, Archived is read-only.
+              </p>
+              </div>
+            </div>
           </div>
           <button
             onClick={handleCreateQuestionnaire}

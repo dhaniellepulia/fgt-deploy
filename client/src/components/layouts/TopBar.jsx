@@ -8,9 +8,10 @@ import {
   ShieldCheck,
   AlertCircle,
   Download,
-  ChevronDown,
 } from "lucide-react";
 import { useAuth } from "../../auth/AuthContext";
+import HelpIcon from "../../assets/Help Icon.svg";
+import AvatarIcon from "../../assets/avatar.png";
 
 const helpLinks = [
   {
@@ -68,19 +69,8 @@ function TopBar() {
           onClick={() => setIsOpen(!isOpen)}
           className="flex items-center gap-2 px-3 py-1 text-white transition-colors hover:bg-white/10 rounded-md cursor-pointer focus:outline-none"
         >
-          <img
-            src="../src/assets/Help Icon.svg"
-            alt="Help"
-            className="w-5 h-5"
-          />
-          <span className="flex items-center gap-1">
-            Help
-            <ChevronDown
-              className={`w-4 h-4 transition-transform duration-200 ${
-                isOpen ? "rotate-180" : ""
-              }`}
-            />
-          </span>
+          <img src={HelpIcon} alt="Help" className="w-5 h-5" />
+          <span className="flex items-center gap-1">Help</span>
         </button>
 
         {isOpen && (
@@ -90,14 +80,14 @@ function TopBar() {
               onClick={() => setIsOpen(false)}
             />
 
-            <ul className="absolute left-0 mt-2 w-56 bg-[#222222] border border-gray-700 rounded-md shadow-xl z-20 py-1 overflow-hidden">
+            <ul className="absolute left-0 mt-2 w-56 bg-[#121212] border border-[#2a2a2a] rounded-md shadow-xl z-20 py-1 overflow-hidden">
               {helpLinks.map((link, index) => (
                 <li key={index}>
                   <button
                     onClick={() => handleNavigation(link.path)}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-200 hover:bg-[#333333] hover:text-white transition-colors text-left"
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-white bg-transparent hover:bg-[#1b1b1b] hover:text-white transition-colors text-left"
                   >
-                    <span className="text-gray-400">{link.icon}</span>
+                    <span className="text-[#d0d0d0]">{link.icon}</span>
                     {link.label}
                   </button>
                 </li>
@@ -117,18 +107,13 @@ function TopBar() {
         "
         >
           <div className="flex items-center gap-5">
-            <img
-              src="../src/assets/avatar.png"
-              alt="avatar"
-              className="w-8 h-8 rounded-full"
-            />
+            <img src={AvatarIcon} alt="avatar" className="w-8 h-8 rounded-full" />
 
             <span className="text-lg font-medium text-neutral-400 tracking-wide lg:block hidden">
               {displayName}
             </span>
           </div>
 
-          <ChevronDown className="text-neutral-500 w-6 h-6" />
         </div>
       </div>
     </div>
