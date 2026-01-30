@@ -4,6 +4,7 @@ import TopBar from "../components/layouts/TopBar.jsx";
 import { useAuth } from "../auth/AuthContext";
 import { countries } from "../data/countries";
 import { fetchGenres, fetchGames } from "../api/metadata";
+import { Trash2, ChevronLeft, Edit } from "lucide-react";
 import {
   addQuestion,
   addQuestionOption,
@@ -16,7 +17,8 @@ import {
   updateQuestionnaireCriteria,
   updateQuestionOption,
 } from "../api/questionnaires";
-
+import MultiSelect from "../components/MultiSelect.jsx";
+import Select from "../components/Select.jsx";
 const questionTypes = [
   { id: 1, label: "Short Answer" },
   { id: 2, label: "Paragraph" },
@@ -98,7 +100,9 @@ function ClientQuestionnaireBuilder() {
               mapped[item.criterionType] = {
                 ...mapped[item.criterionType],
                 matchType: item.matchType,
-                values: Array.isArray(item.valueJson) ? item.valueJson : mapped[item.criterionType].values,
+                values: Array.isArray(item.valueJson)
+                  ? item.valueJson
+                  : mapped[item.criterionType].values,
                 min: item.valueJson?.min ?? mapped[item.criterionType].min,
                 max: item.valueJson?.max ?? mapped[item.criterionType].max,
               };
@@ -125,7 +129,7 @@ function ClientQuestionnaireBuilder() {
   const orderedQuestions = useMemo(() => {
     if (!questionnaire?.questions) return [];
     return [...questionnaire.questions].sort(
-      (a, b) => a.displayOrder - b.displayOrder
+      (a, b) => a.displayOrder - b.displayOrder,
     );
   }, [questionnaire]);
 
@@ -212,7 +216,7 @@ function ClientQuestionnaireBuilder() {
       const res = await addQuestion(
         questionnaireId,
         token,
-        buildQuestionPayload(questionForm)
+        buildQuestionPayload(questionForm),
       );
 
       const questionID = res.item.questionID;
@@ -303,7 +307,7 @@ function ClientQuestionnaireBuilder() {
       await updateQuestion(
         editingQuestionID,
         token,
-        buildQuestionPayload(questionForm)
+        buildQuestionPayload(questionForm),
       );
 
       if (
@@ -314,7 +318,7 @@ function ClientQuestionnaireBuilder() {
         const options = parseOptions(questionForm.newOptions);
         const existingOptionCount =
           questionnaire?.questions?.find(
-            (item) => item.questionID === editingQuestionID
+            (item) => item.questionID === editingQuestionID,
           )?.options?.length || 0;
         let order = existingOptionCount + 1;
         for (const optionText of options) {
@@ -364,7 +368,7 @@ function ClientQuestionnaireBuilder() {
 
   const handleReorderQuestion = async (questionID, direction) => {
     const index = orderedQuestions.findIndex(
-      (item) => item.questionID === questionID
+      (item) => item.questionID === questionID,
     );
     if (index === -1) return;
     const swapIndex = direction === "up" ? index - 1 : index + 1;
@@ -515,678 +519,851 @@ function ClientQuestionnaireBuilder() {
   const isEditing = editingQuestionID !== null;
 
   return (
-    <div className="min-h-screen text-white">
-      <header className="flex items-center justify-between py-15 gap-4">
-        <div>
-          <h3 className="text-[#F9B71E] text-2xl font-bold">
+    <div className="min-h-screen text-white bg-[#1F1F1F]">
+      <header className="flex items-center justify-end py-5 px-5 lg:px-10 gap-4">
+        <TopBar />
+      </header>
+      <main className="w-full lg:max-w-[1440px] mx-auto p-5 mt-5 lg:mt-20">
+        <div className="mb-10">
+          <h3 className="text-[#F9B71E] text-3xl font-bold">
             {questionnaire.title}
           </h3>
           <p className="text-sm text-neutral-400">
             Manage questions and playtester criteria
           </p>
         </div>
-        <TopBar />
-      </header>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <section className="bg-[#252525] rounded-xl p-6">
-          <h4 className="font-semibold mb-4">Questionnaire Settings</h4>
-          <div className="grid grid-cols-1 gap-3">
-            <input
-              name="title"
-              value={questionnaireForm.title}
-              onChange={handleQuestionnaireChange}
-              className="bg-white text-black rounded p-2"
-              placeholder="Title"
-            />
-            <textarea
-              name="description"
-              value={questionnaireForm.description}
-              onChange={handleQuestionnaireChange}
-              className="bg-white text-black rounded p-2"
-              placeholder="Description"
-            />
-            <input
-              type="datetime-local"
-              name="startsAt"
-              value={questionnaireForm.startsAt}
-              onChange={handleQuestionnaireChange}
-              className="bg-white text-black rounded p-2"
-            />
-            <input
-              type="datetime-local"
-              name="endsAt"
-              value={questionnaireForm.endsAt}
-              onChange={handleQuestionnaireChange}
-              className="bg-white text-black rounded p-2"
-            />
-            <input
-              name="timeLimitSeconds"
-              value={questionnaireForm.timeLimitSeconds}
-              onChange={handleQuestionnaireChange}
-              className="bg-white text-black rounded p-2"
-              placeholder="Time limit (seconds)"
-            />
-            <input
-              name="maxResponses"
-              value={questionnaireForm.maxResponses}
-              onChange={handleQuestionnaireChange}
-              className="bg-white text-black rounded p-2"
-              placeholder="Max responses"
-            />
-            <select
-              name="statusID"
-              value={questionnaireForm.statusID}
-              onChange={handleQuestionnaireChange}
-              className="bg-white text-black rounded p-2"
-            >
-              <option value={1}>Draft</option>
-              <option value={2}>Published</option>
-              <option value={3}>Archived</option>
-            </select>
-          </div>
-          <div className="flex items-center gap-3 mt-4">
-            <button
-              onClick={handleSaveQuestionnaire}
-              disabled={saving}
-              className="bg-yellow-400 text-black px-6 py-2 rounded font-semibold disabled:opacity-60"
-            >
-              {saving ? "Saving..." : "Save Questionnaire"}
-            </button>
-            <button
-              onClick={handleDeleteQuestionnaire}
-              className="text-red-400 text-sm"
-            >
-              Delete
-            </button>
-          </div>
-        </section>
-
-
-        <section className="bg-[#252525] rounded-xl p-6">
-          <h4 className="font-semibold mb-4">Playtester Criteria</h4>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="bg-[#1f1f1f] rounded-lg p-3">
-              <div className="flex items-center justify-between gap-2">
-                <label className="text-xs font-semibold">Gender</label>
-                <select
-                  value={criteria.gender.matchType}
-                  onChange={(e) =>
-                    handleCriteriaChange("gender", { matchType: e.target.value })
-                  }
-                  className="bg-white text-black rounded px-2 py-1 text-xs"
+        <div className="flex flex-col gap-5 lg:gap-15">
+          <section className="bg-[#252525] rounded-xl p-5 lg:p-15 shadow-md ">
+            <h4 className="font-semibold mb-3 text-2xl text-gray-200">
+              Questionnaire Settings
+            </h4>
+            <hr className="border-gray-500 mb-10" />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              <div className="flex flex-col gap-1">
+                <label
+                  className="text-gray-300 mb-1 font-semibold"
+                  htmlFor="title"
                 >
-                  <option>Priority</option>
-                  <option>Requirement</option>
-                </select>
-              </div>
-              <select
-                multiple
-                value={criteria.gender.values}
-                onChange={(e) =>
-                  handleCriteriaChange("gender", {
-                    values: Array.from(e.target.selectedOptions).map(
-                      (opt) => opt.value
-                    ),
-                  })
-                }
-                className="mt-2 bg-white text-black rounded p-2 text-sm min-h-16 w-full"
-              >
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Non-binary">Non-binary</option>
-                <option value="Prefer not to say">Prefer not to say</option>
-              </select>
-            </div>
-
-            <div className="bg-[#1f1f1f] rounded-lg p-3">
-              <div className="flex items-center justify-between gap-2">
-                <label className="text-xs font-semibold">Age Range</label>
-                <select
-                  value={criteria.age.matchType}
-                  onChange={(e) =>
-                    handleCriteriaChange("age", { matchType: e.target.value })
-                  }
-                  className="bg-white text-black rounded px-2 py-1 text-xs"
-                >
-                  <option>Priority</option>
-                  <option>Requirement</option>
-                </select>
-              </div>
-              <div className="mt-2 flex items-center gap-2">
+                  Title
+                </label>
                 <input
-                  type="number"
-                  placeholder="Min"
-                  value={criteria.age.min}
-                  onChange={(e) =>
-                    handleCriteriaChange("age", { min: e.target.value })
-                  }
-                  className="bg-white text-black rounded p-2 text-sm w-20"
+                  name="title"
+                  value={questionnaireForm.title}
+                  onChange={handleQuestionnaireChange}
+                  className="bg-gray border border-gray-500 text-gray-200 placeholder-gray-400 focus:placeholder-gray-400 focus:border-blue-400  focus:text-gray-200 transition-colors py-3 px-5 outline-none rounded-lg mb-5"
+                  placeholder="Title"
                 />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label
+                  className="text-gray-300 mb-1 font-semibold"
+                  htmlFor="description"
+                >
+                  Description
+                </label>
+                <textarea
+                  name="description"
+                  value={questionnaireForm.description}
+                  onChange={handleQuestionnaireChange}
+                  className="bg-gray border border-gray-500 text-gray-200 placeholder-gray-400 focus:placeholder-gray-400 focus:border-blue-400  focus:text-gray-200 transition-colors py-3 px-5 outline-none rounded-lg mb-5"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                {" "}
+                <label
+                  className="text-gray-300 mb-1 font-semibold"
+                  htmlFor="startsAt"
+                >
+                  Starts At
+                </label>
                 <input
-                  type="number"
-                  placeholder="Max"
-                  value={criteria.age.max}
-                  onChange={(e) =>
-                    handleCriteriaChange("age", { max: e.target.value })
-                  }
-                  className="bg-white text-black rounded p-2 text-sm w-20"
+                  type="datetime-local"
+                  name="startsAt"
+                  value={questionnaireForm.startsAt}
+                  onChange={handleQuestionnaireChange}
+                  className="bg-gray border border-gray-500 text-gray-200 placeholder-gray-400 focus:placeholder-gray-400 focus:border-blue-400  focus:text-gray-200 transition-colors py-3 px-5 outline-none rounded-lg mb-5"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                {" "}
+                <label
+                  className="text-gray-300 mb-1 font-semibold"
+                  htmlFor="endsAt"
+                >
+                  Ends At
+                </label>
+                <input
+                  type="datetime-local"
+                  name="endsAt"
+                  value={questionnaireForm.endsAt}
+                  onChange={handleQuestionnaireChange}
+                  className="bg-gray border border-gray-500 text-gray-200 placeholder-gray-400 focus:placeholder-gray-400 focus:border-blue-400  focus:text-gray-200 transition-colors py-3 px-5 outline-none rounded-lg mb-5"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label
+                  className="text-gray-300 mb-1 font-semibold"
+                  htmlFor="timeLimitSeconds"
+                >
+                  Time Limit (seconds)
+                </label>
+                <input
+                  name="timeLimitSeconds"
+                  value={questionnaireForm.timeLimitSeconds}
+                  onChange={handleQuestionnaireChange}
+                  className="bg-gray border border-gray-500 text-gray-200 placeholder-gray-400 focus:placeholder-gray-400 focus:border-blue-400  focus:text-gray-200 transition-colors py-3 px-5 outline-none rounded-lg mb-5"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-gray-300 mb-1" htmlFor="maxResponses">
+                  Max Responses
+                </label>
+                <input
+                  name="maxResponses"
+                  value={questionnaireForm.maxResponses}
+                  onChange={handleQuestionnaireChange}
+                  className="bg-gray border border-gray-500 text-gray-200 placeholder-gray-400 focus:placeholder-gray-400 focus:border-blue-400  focus:text-gray-200 transition-colors py-3 px-5 outline-none rounded-lg mb-5"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label
+                  className="text-gray-300 mb-1 font-semibold"
+                  htmlFor="statusID"
+                >
+                  Status
+                </label>
+                <Select
+                  name="statusID"
+                  value={questionnaireForm.statusID}
+                  onChange={handleQuestionnaireChange}
+                  options={[
+                    { value: 1, label: "Draft" },
+                    { value: 2, label: "Published" },
+                    { value: 3, label: "Archived" },
+                  ]}
                 />
               </div>
             </div>
-
-            <div className="bg-[#1f1f1f] rounded-lg p-3">
-              <div className="flex items-center justify-between gap-2">
-                <label className="text-xs font-semibold">Location</label>
-                <select
-                  value={criteria.location.matchType}
-                  onChange={(e) =>
-                    handleCriteriaChange("location", {
-                      matchType: e.target.value,
-                    })
-                  }
-                  className="bg-white text-black rounded px-2 py-1 text-xs"
-                >
-                  <option>Priority</option>
-                  <option>Requirement</option>
-                </select>
-              </div>
-              <select
-                multiple
-                value={criteria.location.values}
-                onChange={(e) =>
-                  handleCriteriaChange("location", {
-                    values: Array.from(e.target.selectedOptions).map(
-                      (opt) => opt.value
-                    ),
-                  })
-                }
-                className="mt-2 bg-white text-black rounded p-2 text-sm min-h-16 w-full"
+            <div className="flex items-center gap-5 mt-10 justify-end">
+              <button
+                onClick={handleSaveQuestionnaire}
+                disabled={saving}
+                className="bg-linear-to-r from-[#4183E8] to-[#284CC4] text-white px-10 py-3 rounded font-semibold disabled:opacity-60"
               >
-                {countries.map((country) => (
-                  <option key={country.code} value={country.code}>
-                    {country.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="bg-[#1f1f1f] rounded-lg p-3">
-              <div className="flex items-center justify-between gap-2">
-                <label className="text-xs font-semibold">Language</label>
-                <select
-                  value={criteria.language.matchType}
-                  onChange={(e) =>
-                    handleCriteriaChange("language", {
-                      matchType: e.target.value,
-                    })
-                  }
-                  className="bg-white text-black rounded px-2 py-1 text-xs"
-                >
-                  <option>Priority</option>
-                  <option>Requirement</option>
-                </select>
-              </div>
-              <select
-                multiple
-                value={criteria.language.values}
-                onChange={(e) =>
-                  handleCriteriaChange("language", {
-                    values: Array.from(e.target.selectedOptions).map(
-                      (opt) => opt.value
-                    ),
-                  })
-                }
-                className="mt-2 bg-white text-black rounded p-2 text-sm min-h-16 w-full"
+                {saving ? "Saving..." : "Save Questionnaire"}
+              </button>
+              <button
+                onClick={handleDeleteQuestionnaire}
+                className="text-red-400 text-sm"
               >
-                {[
-                  "English",
-                  "Spanish",
-                  "French",
-                  "German",
-                  "Italian",
-                  "Portuguese",
-                  "Dutch",
-                  "Swedish",
-                  "Norwegian",
-                  "Danish",
-                  "Finnish",
-                  "Polish",
-                  "Czech",
-                  "Hungarian",
-                  "Romanian",
-                  "Greek",
-                  "Turkish",
-                  "Russian",
-                  "Ukrainian",
-                  "Arabic",
-                  "Hebrew",
-                  "Hindi",
-                  "Urdu",
-                  "Bengali",
-                  "Tamil",
-                  "Telugu",
-                  "Thai",
-                  "Vietnamese",
-                  "Indonesian",
-                  "Malay",
-                  "Filipino",
-                  "Korean",
-                  "Japanese",
-                  "Chinese (Simplified)",
-                  "Chinese (Traditional)",
-                ].map((language) => (
-                  <option key={language} value={language}>
-                    {language}
-                  </option>
-                ))}
-              </select>
+                <Trash2 />
+              </button>
             </div>
+          </section>
 
-            <div className="bg-[#1f1f1f] rounded-lg p-3">
-              <div className="flex items-center justify-between gap-2">
-                <label className="text-xs font-semibold">Preferred Genre</label>
-                <select
-                  value={criteria.preferredGenre.matchType}
-                  onChange={(e) =>
-                    handleCriteriaChange("preferredGenre", {
-                      matchType: e.target.value,
-                    })
-                  }
-                  className="bg-white text-black rounded px-2 py-1 text-xs"
-                >
-                  <option>Priority</option>
-                  <option>Requirement</option>
-                </select>
-              </div>
-              <select
-                multiple
-                value={criteria.preferredGenre.values}
-                onChange={(e) =>
-                  handleCriteriaChange("preferredGenre", {
-                    values: Array.from(e.target.selectedOptions).map((opt) =>
-                      Number(opt.value)
-                    ),
-                  })
-                }
-                className="mt-2 bg-white text-black rounded p-2 text-sm min-h-16 w-full"
-              >
-                {genres.map((genre) => (
-                  <option key={genre.gameGenreID} value={genre.gameGenreID}>
-                    {genre.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <section className="bg-[#252525] rounded-xl p-5 lg:p-15 shadow-md">
+            <h4 className="font-semibold mb-3 text-2xl text-gray-200">
+              Playtester Criteria
+            </h4>
+            <hr className="border-gray-500 mb-10" />
+            <div className="space-y-4 grid lg:grid-cols-2 grid-cols-1">
+              <div>
+                <label className="text-gray-300 mb-1 font-semibold">
+                  Gender
+                </label>
 
-            <div className="bg-[#1f1f1f] rounded-lg p-3">
-              <div className="flex items-center justify-between gap-2">
-                <label className="text-xs font-semibold">Recent Game</label>
-                <select
-                  value={criteria.recentGame.matchType}
-                  onChange={(e) =>
-                    handleCriteriaChange("recentGame", {
-                      matchType: e.target.value,
-                    })
-                  }
-                  className="bg-white text-black rounded px-2 py-1 text-xs"
-                >
-                  <option>Priority</option>
-                  <option>Requirement</option>
-                </select>
-              </div>
-              <select
-                multiple
-                value={criteria.recentGame.values}
-                onChange={(e) =>
-                  handleCriteriaChange("recentGame", {
-                    values: Array.from(e.target.selectedOptions).map((opt) =>
-                      Number(opt.value)
-                    ),
-                  })
-                }
-                className="mt-2 bg-white text-black rounded p-2 text-sm min-h-16 w-full"
-              >
-                {games.map((game) => (
-                  <option key={game.gameID} value={game.gameID}>
-                    {game.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <button
-            onClick={handleSaveCriteria}
-            disabled={saving}
-            className="mt-6 bg-yellow-400 text-black px-6 py-2 rounded font-semibold disabled:opacity-60"
-          >
-            {saving ? "Saving..." : "Save Criteria"}
-          </button>
-        </section>
-      </div>
-      <section className="bg-[#252525] rounded-xl p-6 mt-6">
-        <h4 className="font-semibold mb-4">Questions</h4>
-        <div className="mt-6 border-t border-neutral-800 pt-4">
-          <h5 className="font-semibold mb-3">
-            {isEditing ? "Edit Question" : "Add Question"}
-          </h5>
-          <div className="grid grid-cols-1 gap-3">
-            <label className="text-xs text-neutral-400">Question type</label>
-            <select
-              name="questionTypeID"
-              value={questionForm.questionTypeID}
-              onChange={handleQuestionChange}
-              className="bg-white text-black rounded p-2"
-            >
-              {questionTypes.map((type) => (
-                <option key={type.id} value={type.id}>
-                  {type.label}
-                </option>
-              ))}
-            </select>
-            <input
-              name="questionText"
-              value={questionForm.questionText}
-              onChange={handleQuestionChange}
-              className="bg-white text-black rounded p-2"
-              placeholder="Question text"
-            />
-            <textarea
-              name="helpText"
-              value={questionForm.helpText}
-              onChange={handleQuestionChange}
-              className="bg-white text-black rounded p-2"
-              placeholder="Help text (optional)"
-            />
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                name="isRequired"
-                checked={questionForm.isRequired}
-                onChange={handleQuestionChange}
-              />
-              Required
-            </label>
-            <input
-              name="placeholderText"
-              value={questionForm.placeholderText}
-              onChange={handleQuestionChange}
-              className="bg-white text-black rounded p-2"
-              placeholder="Placeholder text (optional)"
-            />
-            {(Number(questionForm.questionTypeID) === 3 ||
-              Number(questionForm.questionTypeID) === 4) && (
-              <div className="grid grid-cols-1 gap-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <input
-                    name="minSelections"
-                    value={questionForm.minSelections}
-                    onChange={handleQuestionChange}
-                    className="bg-white text-black rounded p-2"
-                    placeholder="Min selections"
+                <div className="flex items-center gap-2 mt-2">
+                  <Select
+                    name="genderMatchType"
+                    value={criteria.gender.matchType}
+                    onChange={(e) =>
+                      handleCriteriaChange("gender", {
+                        matchType: e.target.value,
+                      })
+                    }
+                    options={[
+                      { value: "Priority", label: "Priority" },
+                      { value: "Requirement", label: "Requirement" },
+                    ]}
+                    className="max-w-[150px]"
                   />
-                  <input
-                    name="maxSelections"
-                    value={questionForm.maxSelections}
-                    onChange={handleQuestionChange}
-                    className="bg-white text-black rounded p-2"
-                    placeholder="Max selections"
+
+                  <MultiSelect
+                    options={[
+                      { value: "Male", label: "Male" },
+                      { value: "Female", label: "Female" },
+                      { value: "Non-binary", label: "Non-binary" },
+                      {
+                        value: "Prefer not to say",
+                        label: "Prefer not to say",
+                      },
+                    ]}
+                    value={criteria.gender.values}
+                    onChange={(vals) =>
+                      handleCriteriaChange("gender", { values: vals })
+                    }
+                    placeholder="Select gender"
                   />
                 </div>
-                {!isEditing ? (
-                  <textarea
-                    name="options"
-                    value={questionForm.options}
-                    onChange={handleQuestionChange}
-                    className="bg-white text-black rounded p-2"
-                    placeholder="Options (one per line)"
+              </div>
+
+              <div>
+                <label className="text-gray-300 mb-1 font-semibold">
+                  Age Range
+                </label>
+                <div className="flex gap-2 mt-2">
+                  <Select
+                    name="ageMatchType"
+                    value={criteria.age.matchType}
+                    onChange={(e) =>
+                      handleCriteriaChange("age", { matchType: e.target.value })
+                    }
+                    options={[
+                      { value: "Priority", label: "Priority" },
+                      { value: "Requirement", label: "Requirement" },
+                    ]}
+                    className="max-w-[150px]"
                   />
-                ) : (
-                  <textarea
-                    name="newOptions"
-                    value={questionForm.newOptions}
-                    onChange={handleQuestionChange}
-                    className="bg-white text-black rounded p-2"
-                    placeholder="Add new options (one per line)"
+                  <div className="flex flex-wrap gap-2">
+                    <input
+                      type="number"
+                      placeholder="Min"
+                      value={criteria.age.min}
+                      onChange={(e) =>
+                        handleCriteriaChange("age", { min: e.target.value })
+                      }
+                      className="bg-gray border border-gray-500 text-gray-200 placeholder-gray-400 focus:placeholder-gray-400 focus:border-blue-400  focus:text-gray-200 transition-colors py-3 px-5 outline-none rounded-lg mb-5 max-h-[46px]"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Max"
+                      value={criteria.age.max}
+                      onChange={(e) =>
+                        handleCriteriaChange("age", { max: e.target.value })
+                      }
+                      className="bg-gray border border-gray-500 text-gray-200 placeholder-gray-400 focus:placeholder-gray-400 focus:border-blue-400  focus:text-gray-200 transition-colors py-3 px-5 outline-none rounded-lg mb-5 max-h-[46px]"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-gray-300 mb-1 font-semibold">
+                  Location
+                </label>
+                <div className="flex items-center gap-2 mt-2">
+                  <Select
+                    name="locationMatchType"
+                    value={criteria.location.matchType}
+                    onChange={(e) =>
+                      handleCriteriaChange("location", {
+                        matchType: e.target.value,
+                      })
+                    }
+                    options={[
+                      { value: "Priority", label: "Priority" },
+                      { value: "Requirement", label: "Requirement" },
+                    ]}
+                    className="max-w-[150px]"
                   />
+
+                  <MultiSelect
+                    options={countries.map((c) => ({
+                      value: c.code,
+                      label: c.name,
+                    }))}
+                    value={criteria.location.values}
+                    onChange={(vals) =>
+                      handleCriteriaChange("location", { values: vals })
+                    }
+                    placeholder="Select countries"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-gray-300 mb-1 font-semibold">
+                  Language
+                </label>
+                <div className="flex items-center gap-2 mt-2">
+                  <Select
+                    name="languageMatchType"
+                    value={criteria.language.matchType}
+                    onChange={(e) =>
+                      handleCriteriaChange("language", {
+                        matchType: e.target.value,
+                      })
+                    }
+                    options={[
+                      { value: "Priority", label: "Priority" },
+                      { value: "Requirement", label: "Requirement" },
+                    ]}
+                    className="max-w-[150px]"
+                  />
+
+                  <MultiSelect
+                    options={[
+                      "English",
+                      "Spanish",
+                      "French",
+                      "German",
+                      "Italian",
+                      "Portuguese",
+                      "Dutch",
+                      "Swedish",
+                      "Norwegian",
+                      "Danish",
+                      "Finnish",
+                      "Polish",
+                      "Czech",
+                      "Hungarian",
+                      "Romanian",
+                      "Greek",
+                      "Turkish",
+                      "Russian",
+                      "Ukrainian",
+                      "Arabic",
+                      "Hebrew",
+                      "Hindi",
+                      "Urdu",
+                      "Bengali",
+                      "Tamil",
+                      "Telugu",
+                      "Thai",
+                      "Vietnamese",
+                      "Indonesian",
+                      "Malay",
+                      "Filipino",
+                      "Korean",
+                      "Japanese",
+                      "Chinese (Simplified)",
+                      "Chinese (Traditional)",
+                    ].map((lang) => ({
+                      value: lang,
+                      label: lang,
+                    }))}
+                    value={criteria.language.values}
+                    onChange={(vals) =>
+                      handleCriteriaChange("language", { values: vals })
+                    }
+                    placeholder="Select languages"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-gray-300 mb-1 font-semibold">
+                  Preferred Genre
+                </label>
+                <div className="flex items-center gap-2 mt-2">
+                  <Select
+                    name="preferredGenreMatchType"
+                    value={criteria.preferredGenre.matchType}
+                    onChange={(e) =>
+                      handleCriteriaChange("preferredGenre", {
+                        matchType: e.target.value,
+                      })
+                    }
+                    options={[
+                      { value: "Priority", label: "Priority" },
+                      { value: "Requirement", label: "Requirement" },
+                    ]}
+                    className="max-w-[150px]"
+                  />
+
+                  <MultiSelect
+                    options={genres.map((genre) => ({
+                      value: String(genre.gameGenreID),
+                      label: genre.name,
+                    }))}
+                    value={criteria.preferredGenre.values.map(String)}
+                    onChange={(vals) =>
+                      handleCriteriaChange("preferredGenre", {
+                        values: vals.map(Number),
+                      })
+                    }
+                    placeholder="Select genres"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-gray-300 mb-1 font-semibold">
+                  Recent Game
+                </label>
+                <div className="flex items-center gap-2 mt-2">
+                  <Select
+                    name="recentGameMatchType"
+                    value={criteria.recentGame.matchType}
+                    onChange={(e) =>
+                      handleCriteriaChange("recentGame", {
+                        matchType: e.target.value,
+                      })
+                    }
+                    options={[
+                      { value: "Priority", label: "Priority" },
+                      { value: "Requirement", label: "Requirement" },
+                    ]}
+                    className="max-w-[150px]"
+                  />
+
+                  <MultiSelect
+                    options={games.map((game) => ({
+                      value: String(game.gameID),
+                      label: game.name,
+                    }))}
+                    value={criteria.recentGame.values.map(String)}
+                    onChange={(vals) =>
+                      handleCriteriaChange("recentGame", {
+                        values: vals.map(Number),
+                      })
+                    }
+                    placeholder="Select recent games"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <button
+                onClick={handleSaveCriteria}
+                disabled={saving}
+                className="mt-6 bg-linear-to-r from-[#4183E8] to-[#284CC4] text-white px-10 py-3 rounded font-semibold disabled:opacity-60"
+              >
+                {saving ? "Saving..." : "Save Criteria"}
+              </button>
+            </div>
+          </section>
+
+          <section className="bg-[#252525] rounded-xl  p-5 lg:p-15 shadow-md">
+            <h4 className="font-semibold mb-3 text-2xl text-gray-200">
+              Questions
+            </h4>
+            <hr className="border-gray-500 mb-10" />
+
+            <div className="mt-6">
+              <h5 className="font-semibold mb-3">
+                {isEditing ? "Edit Question" : "Add Question"}
+              </h5>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <div className="flex flex-col gap-1">
+                  <label
+                    className="text-gray-300 mb-1 font-semibold"
+                    htmlFor="questionTypeID"
+                  >
+                    Question type
+                  </label>
+                  <Select
+                    name="questionTypeID"
+                    value={questionForm.questionTypeID}
+                    onChange={handleQuestionChange}
+                    options={questionTypes.map((t) => ({
+                      value: t.id,
+                      label: t.label,
+                    }))}
+                    className="mb-5"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  {" "}
+                  <label
+                    className="text-gray-300 mb-1 font-semibold"
+                    htmlFor="questionText"
+                  >
+                    Question Text
+                  </label>
+                  <input
+                    name="questionText"
+                    value={questionForm.questionText}
+                    onChange={handleQuestionChange}
+                    className="bg-gray border border-gray-500 text-gray-200 placeholder-gray-400 focus:placeholder-gray-400 focus:border-blue-400  focus:text-gray-200 transition-colors py-3 px-5 outline-none rounded-lg mb-5"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  {" "}
+                  <label
+                    className="text-gray-300 mb-1 font-semibold"
+                    htmlFor="helpText"
+                  >
+                    Help text (optional)
+                  </label>
+                  <textarea
+                    name="helpText"
+                    value={questionForm.helpText}
+                    onChange={handleQuestionChange}
+                    className="bg-gray border border-gray-500 text-gray-200 placeholder-gray-400 focus:placeholder-gray-400 focus:border-blue-400  focus:text-gray-200 transition-colors py-3 px-5 outline-none rounded-lg mb-5"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  {" "}
+                  <label
+                    className="text-gray-300 mb-1 font-semibold"
+                    htmlFor="placeholderText"
+                  >
+                    Placeholder text (optional)
+                  </label>
+                  <input
+                    name="placeholderText"
+                    value={questionForm.placeholderText}
+                    onChange={handleQuestionChange}
+                    className="bg-gray border border-gray-500 text-gray-200 placeholder-gray-400 focus:placeholder-gray-400 focus:border-blue-400  focus:text-gray-200 transition-colors py-3 px-5 outline-none rounded-lg mb-5"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  {" "}
+                  <label className="flex items-center gap-2 text-gray-300 mb-5 font-semibold">
+                    <input
+                      type="checkbox"
+                      name="isRequired"
+                      checked={questionForm.isRequired}
+                      onChange={handleQuestionChange}
+                    />
+                    Required
+                  </label>
+                </div>
+
+                {(Number(questionForm.questionTypeID) === 3 ||
+                  Number(questionForm.questionTypeID) === 4) && (
+                  <div className="grid grid-cols-1 gap-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="flex flex-col justify-center">
+                        <label
+                          className="text-gray-300 mb-1 font-semibold"
+                          htmlFor="minSelections"
+                        >
+                          Min selections
+                        </label>
+                        <input
+                          name="minSelections"
+                          value={questionForm.minSelections}
+                          onChange={handleQuestionChange}
+                          className="bg-gray border border-gray-500 text-gray-200 placeholder-gray-400 focus:placeholder-gray-400 focus:border-blue-400  focus:text-gray-200 transition-colors py-3 px-5 outline-none rounded-lg mb-5"
+                        />
+                      </div>
+                      <div className="flex flex-col justify-center">
+                        {" "}
+                        <label
+                          className="text-gray-300 mb-1 font-semibold"
+                          htmlFor="maxSelections"
+                        >
+                          Max selections
+                        </label>
+                        <input
+                          name="maxSelections"
+                          value={questionForm.maxSelections}
+                          onChange={handleQuestionChange}
+                          className="bg-gray border border-gray-500 text-gray-200 placeholder-gray-400 focus:placeholder-gray-400 focus:border-blue-400  focus:text-gray-200 transition-colors py-3 px-5 outline-none rounded-lg mb-5"
+                        />
+                      </div>
+                    </div>
+                    {!isEditing ? (
+                      <div className="w-full">
+                        <label
+                          className="text-gray-300 mb-1 font-semibold"
+                          htmlFor="options"
+                        >
+                          Options (one per line)
+                        </label>
+                        <textarea
+                          name="options"
+                          value={questionForm.options}
+                          onChange={handleQuestionChange}
+                          className="bg-gray border border-gray-500 text-gray-200 placeholder-gray-400 focus:placeholder-gray-400 focus:border-blue-400  focus:text-gray-200 transition-colors py-3 px-5 outline-none rounded-lg mb-5 w-full"
+                        />
+                      </div>
+                    ) : (
+                      <div>
+                        <label
+                          className="text-gray-300 mb-1 font-semibold"
+                          htmlFor="newOptions"
+                        >
+                          Add new options (one per line)
+                        </label>
+                        <textarea
+                          name="newOptions"
+                          value={questionForm.newOptions}
+                          onChange={handleQuestionChange}
+                          className="bg-gray border border-gray-500 text-gray-200 placeholder-gray-400 focus:placeholder-gray-400 focus:border-blue-400  focus:text-gray-200 transition-colors py-3 px-5 outline-none rounded-lg mb-5 w-full"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+                {(Number(questionForm.questionTypeID) === 5 ||
+                  Number(questionForm.questionTypeID) === 6) && (
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="flex flex-col justify-center">
+                      <label
+                        className="text-gray-300 mb-1 font-semibold"
+                        htmlFor="minValue"
+                      >
+                        Min value
+                      </label>
+                      <input
+                        name="minValue"
+                        value={questionForm.minValue}
+                        onChange={handleQuestionChange}
+                        className="bg-gray border border-gray-500 text-gray-200 placeholder-gray-400 focus:placeholder-gray-400 focus:border-blue-400  focus:text-gray-200 transition-colors py-3 px-5 outline-none rounded-lg mb-5  w-full"
+                      />
+                    </div>
+                    <div className="flex flex-col justify-center">
+                      {" "}
+                      <label
+                        className="text-gray-300 mb-1 font-semibold"
+                        htmlFor="minValue"
+                      >
+                        Max value
+                      </label>
+                      <input
+                        name="maxValue"
+                        value={questionForm.maxValue}
+                        onChange={handleQuestionChange}
+                        className="bg-gray border border-gray-500 text-gray-200 placeholder-gray-400 focus:placeholder-gray-400 focus:border-blue-400  focus:text-gray-200 transition-colors py-3 px-5 outline-none rounded-lg mb-5 w-full"
+                      />
+                    </div>
+                    <div className="flex flex-col justify-center">
+                      {" "}
+                      <label
+                        className="text-gray-300 mb-1 font-semibold"
+                        htmlFor="minValue"
+                      >
+                        Step
+                      </label>
+                      <input
+                        name="stepValue"
+                        value={questionForm.stepValue}
+                        onChange={handleQuestionChange}
+                        className="bg-gray border border-gray-500 text-gray-200 placeholder-gray-400 focus:placeholder-gray-400 focus:border-blue-400  focus:text-gray-200 transition-colors py-3 px-5 outline-none rounded-lg mb-5  w-full"
+                      />
+                    </div>
+                  </div>
                 )}
               </div>
-            )}
-            {(Number(questionForm.questionTypeID) === 5 ||
-              Number(questionForm.questionTypeID) === 6) && (
-              <div className="grid grid-cols-3 gap-3">
-                <input
-                  name="minValue"
-                  value={questionForm.minValue}
-                  onChange={handleQuestionChange}
-                  className="bg-white text-black rounded p-2"
-                  placeholder="Min value"
-                />
-                <input
-                  name="maxValue"
-                  value={questionForm.maxValue}
-                  onChange={handleQuestionChange}
-                  className="bg-white text-black rounded p-2"
-                  placeholder="Max value"
-                />
-                <input
-                  name="stepValue"
-                  value={questionForm.stepValue}
-                  onChange={handleQuestionChange}
-                  className="bg-white text-black rounded p-2"
-                  placeholder="Step"
-                />
-              </div>
-            )}
-            {isEditing ? (
-              <div className="flex gap-3">
-                <button
-                  onClick={handleUpdateQuestion}
-                  disabled={saving}
-                  className="bg-yellow-400 text-black px-6 py-2 rounded font-semibold disabled:opacity-60"
-                >
-                  {saving ? "Saving..." : "Update Question"}
-                </button>
-                <button
-                  onClick={() => {
-                    setEditingQuestionID(null);
-                    setQuestionForm({
-                      questionTypeID: 1,
-                      questionText: "",
-                      helpText: "",
-                      isRequired: false,
-                      displayOrder:
-                        (questionnaire?.questions?.length || 0) + 1,
-                      options: "",
-                      newOptions: "",
-                      minSelections: "",
-                      maxSelections: "",
-                      minValue: "",
-                      maxValue: "",
-                      stepValue: "",
-                      placeholderText: "",
-                    });
-                  }}
-                  className="text-sm text-neutral-400"
-                >
-                  Cancel
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={handleAddQuestion}
-                disabled={saving}
-                className="bg-yellow-400 text-black px-6 py-2 rounded font-semibold disabled:opacity-60"
-              >
-                {saving ? "Saving..." : "Add Question"}
-              </button>
-            )}
-          </div>
-        </div>
-        {orderedQuestions.length ? (
-          <div className="space-y-4">
-            {orderedQuestions.map((q, index) => (
-              <div
-                key={q.questionID}
-                className={`border rounded-lg p-4 ${
-                  editingQuestionID === q.questionID
-                    ? "border-yellow-400"
-                    : "border-neutral-800"
-                }`}
-              >
-                <div className="flex justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="font-semibold">{q.questionText}</p>
-                      <span className="text-xs text-neutral-400">
-                        {getQuestionTypeLabel(q.questionTypeID)}
-                      </span>
-                    </div>
-                    <p className="text-xs text-neutral-400">
-                      Order {q.displayOrder} ·{" "}
-                      {q.isRequired ? "Required" : "Optional"}
-                    </p>
-                    {q.helpText && (
-                      <p className="text-xs text-neutral-300 mt-1">
-                        {q.helpText}
-                      </p>
-                    )}
-                    {q.placeholderText && (
-                      <p className="text-xs text-neutral-500">
-                        Placeholder: {q.placeholderText}
-                      </p>
-                    )}
-                    {(q.minSelections ||
-                      q.maxSelections ||
-                      q.minValue ||
-                      q.maxValue ||
-                      q.stepValue) && (
-                      <p className="text-xs text-neutral-500 mt-1">
-                        Constraints:{" "}
-                        {[q.minSelections && `min select ${q.minSelections}`,
-                        q.maxSelections && `max select ${q.maxSelections}`,
-                        q.minValue && `min ${q.minValue}`,
-                        q.maxValue && `max ${q.maxValue}`,
-                        q.stepValue && `step ${q.stepValue}`]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </p>
-                    )}
-                    {q.options?.length > 0 && (
-                      <div className="mt-2 space-y-2">
-                        {q.options.map((option) => (
-                          <div
-                            key={option.questionOptionID}
-                            className="flex items-center gap-2"
-                          >
-                            <input
-                              value={
-                                optionDrafts[option.questionOptionID] ??
-                                option.optionText
-                              }
-                              onChange={(e) =>
-                                handleOptionDraftChange(
-                                  option.questionOptionID,
-                                  e.target.value
-                                )
-                              }
-                              className="bg-white text-black rounded p-1 text-xs flex-1"
-                            />
+              {isEditing ? (
+                <div className="flex gap-3 justify-end">
+                  <button
+                    onClick={handleUpdateQuestion}
+                    disabled={saving}
+                    className="bg-linear-to-r from-[#4183E8] to-[#284CC4] text-white px-10 py-3 rounded font-semibold disabled:opacity-60"
+                  >
+                    {saving ? "Saving..." : "Update Question"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingQuestionID(null);
+                      setQuestionForm({
+                        questionTypeID: 1,
+                        questionText: "",
+                        helpText: "",
+                        isRequired: false,
+                        displayOrder:
+                          (questionnaire?.questions?.length || 0) + 1,
+                        options: "",
+                        newOptions: "",
+                        minSelections: "",
+                        maxSelections: "",
+                        minValue: "",
+                        maxValue: "",
+                        stepValue: "",
+                        placeholderText: "",
+                      });
+                    }}
+                    className="text-sm text-neutral-400"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <div className="flex justify-end">
+                  <button
+                    onClick={handleAddQuestion}
+                    disabled={saving}
+                    className="bg-linear-to-r from-[#4183E8] to-[#284CC4] text-white px-10 py-3 rounded font-semibold disabled:opacity-60"
+                  >
+                    {saving ? "Saving..." : "Add Question"}
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="lg:bg-[#2c2c2c] mt-10 rounded-xl lg:p-10">
+              {orderedQuestions.length ? (
+                <div className="space-y-4">
+                  {orderedQuestions.map((q, index) => (
+                    <div
+                      key={q.questionID}
+                      className={`border  rounded-lg p-4 ${
+                        editingQuestionID === q.questionID
+                          ? "border-yellow-400"
+                          : "border-gray-600"
+                      }`}
+                    >
+                      <div className="flex justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="font-semibold">{q.questionText}</p>
+                            <span className="text-xs text-neutral-400">
+                              {getQuestionTypeLabel(q.questionTypeID)}
+                            </span>
+                          </div>
+                          <p className="text-xs text-neutral-400">
+                            Order {q.displayOrder} ·{" "}
+                            {q.isRequired ? "Required" : "Optional"}
+                          </p>
+                          {q.helpText && (
+                            <p className="text-xs text-neutral-300 mt-1">
+                              {q.helpText}
+                            </p>
+                          )}
+                          {q.placeholderText && (
+                            <p className="text-xs text-neutral-500">
+                              Placeholder: {q.placeholderText}
+                            </p>
+                          )}
+                          {(q.minSelections ||
+                            q.maxSelections ||
+                            q.minValue ||
+                            q.maxValue ||
+                            q.stepValue) && (
+                            <p className="text-xs text-neutral-500 mt-1">
+                              Constraints:{" "}
+                              {[
+                                q.minSelections &&
+                                  `min select ${q.minSelections}`,
+                                q.maxSelections &&
+                                  `max select ${q.maxSelections}`,
+                                q.minValue && `min ${q.minValue}`,
+                                q.maxValue && `max ${q.maxValue}`,
+                                q.stepValue && `step ${q.stepValue}`,
+                              ]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </p>
+                          )}
+                          {q.options?.length > 0 && (
+                            <div className="mt-2 space-y-2 grid grid-cols-1 lg:grid-cols-2 space-x-10">
+                              {q.options.map((option) => (
+                                <div
+                                  key={option.questionOptionID}
+                                  className="flex items-center gap-2 w-full"
+                                >
+                                  <input
+                                    value={
+                                      optionDrafts[option.questionOptionID] ??
+                                      option.optionText
+                                    }
+                                    onChange={(e) =>
+                                      handleOptionDraftChange(
+                                        option.questionOptionID,
+                                        e.target.value,
+                                      )
+                                    }
+                                    className=" text-black rounded text-xs w-full lg:max-w-sm bg-gray border border-gray-500 text-gray-200 placeholder-gray-400 focus:placeholder-gray-400 focus:border-blue-400  focus:text-gray-200 transition-colors py-3 px-5 outline-none w-full"
+                                  />
+                                  <button
+                                    onClick={() =>
+                                      handleSaveOption(option.questionOptionID)
+                                    }
+                                    className="text-xs text-green-400"
+                                  >
+                                    Save
+                                  </button>
+                                  <button
+                                    onClick={() =>
+                                      handleDeleteOption(
+                                        option.questionOptionID,
+                                      )
+                                    }
+                                    className="text-xs text-red-400"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {(Number(q.questionTypeID) === 3 ||
+                            Number(q.questionTypeID) === 4) && (
+                            <div className="mt-2 flex items-center gap-2">
+                              <textarea
+                                value={newOptionDrafts[q.questionID] || ""}
+                                onChange={(e) =>
+                                  handleNewOptionDraftChange(
+                                    q.questionID,
+                                    e.target.value,
+                                  )
+                                }
+                                className="text-black rounded text-xs w-full lg:max-w-sm bg-gray border border-gray-500 text-gray-200 placeholder-gray-400 focus:placeholder-gray-400 focus:border-blue-400  focus:text-gray-200 transition-colors py-3 px-5 outline-none"
+                                placeholder="Add option (one per line)"
+                              />
+                              <button
+                                onClick={() => handleAddOption(q)}
+                                className="text-xs text-yellow-400 mt-1"
+                              >
+                                Add
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex flex-row items-start gap-2">
+                          <div className="flex gap-2">
                             <button
                               onClick={() =>
-                                handleSaveOption(option.questionOptionID)
+                                handleReorderQuestion(q.questionID, "up")
                               }
-                              className="text-xs text-yellow-400"
+                              disabled={index === 0 || saving}
+                              className="text-xs text-neutral-400 disabled:opacity-50"
                             >
-                              Save
+                              ↑
                             </button>
                             <button
                               onClick={() =>
-                                handleDeleteOption(option.questionOptionID)
+                                handleReorderQuestion(q.questionID, "down")
                               }
-                              className="text-xs text-red-400"
+                              disabled={
+                                index === orderedQuestions.length - 1 || saving
+                              }
+                              className="text-xs text-neutral-400 disabled:opacity-50"
                             >
-                              Delete
+                              ↓
                             </button>
                           </div>
-                        ))}
+                          <button
+                            onClick={() => handleEditQuestion(q)}
+                            className="text-xs text-yellow-400"
+                          >
+                            <Edit size={15} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteQuestion(q.questionID)}
+                            className="text-xs text-red-400"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
                       </div>
-                    )}
-                    {(Number(q.questionTypeID) === 3 ||
-                      Number(q.questionTypeID) === 4) && (
-                      <div className="mt-2 flex items-start gap-2">
-                        <textarea
-                          value={newOptionDrafts[q.questionID] || ""}
-                          onChange={(e) =>
-                            handleNewOptionDraftChange(
-                              q.questionID,
-                              e.target.value
-                            )
-                          }
-                          className="bg-white text-black rounded p-1 text-xs flex-1 min-h-[48px]"
-                          placeholder="Add option (one per line)"
-                        />
-                        <button
-                          onClick={() => handleAddOption(q)}
-                          className="text-xs text-yellow-400 mt-1"
-                        >
-                          Add
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleReorderQuestion(q.questionID, "up")}
-                        disabled={index === 0 || saving}
-                        className="text-xs text-neutral-400 disabled:opacity-50"
-                      >
-                        ↑
-                      </button>
-                      <button
-                        onClick={() => handleReorderQuestion(q.questionID, "down")}
-                        disabled={index === orderedQuestions.length - 1 || saving}
-                        className="text-xs text-neutral-400 disabled:opacity-50"
-                      >
-                        ↓
-                      </button>
                     </div>
-                    <button
-                      onClick={() => handleEditQuestion(q)}
-                      className="text-xs text-yellow-400"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDeleteQuestion(q.questionID)}
-                      className="text-xs text-red-400"
-                    >
-                      Delete
-                    </button>
-                  </div>
+                  ))}
                 </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-neutral-400">No questions yet.</p>
-        )}
-
-      </section>
-      <div className="mt-8">
-        <button
-          onClick={() => navigate(`/client/projects/${projectId}`)}
-          className="text-sm text-neutral-400"
-        >
-          Back to project
-        </button>
-      </div>
+              ) : (
+                <p className="text-sm text-neutral-400">No questions yet.</p>
+              )}
+            </div>
+          </section>
+        </div>
+        <div className="mt-8">
+          <button
+            onClick={() => navigate(`/client/projects/${projectId}`)}
+            className="text-sm text-neutral-400 flex items-center hover:text-yellow-400 transition-color"
+          >
+            <ChevronLeft />
+            Back to project
+          </button>
+        </div>
+      </main>
     </div>
   );
 }
 
 export default ClientQuestionnaireBuilder;
-

@@ -213,7 +213,7 @@ export const countries = [
   { code: "SD", name: "Sudan" },
   { code: "SR", name: "Suriname" },
   { code: "SJ", name: "Svalbard and Jan Mayen" },
-  { code: "SZ", name: "Eswatini" },
+  // { code: "SZ", name: "Eswatini" }, Duplicate code: "SZ"
   { code: "SE", name: "Sweden" },
   { code: "CH", name: "Switzerland" },
   { code: "SY", name: "Syrian Arab Republic" },
@@ -248,5 +248,5 @@ export const countries = [
   { code: "EH", name: "Western Sahara" },
   { code: "YE", name: "Yemen" },
   { code: "ZM", name: "Zambia" },
-  { code: "ZW", name: "Zimbabwe" }
+  { code: "ZW", name: "Zimbabwe" },
 ];

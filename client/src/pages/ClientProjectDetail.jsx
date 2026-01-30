@@ -11,7 +11,8 @@ import {
   fetchClientProjectById,
   updateClientProject,
 } from "../api/clientProjects";
-
+import { Trash2, Edit, Settings } from "lucide-react";
+import Select from "../components/Select.jsx";
 function ClientProjectDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -150,277 +151,321 @@ function ClientProjectDetail() {
   }
 
   return (
-    <div className="min-h-screen text-white">
-      <header className="flex items-center justify-between py-15 gap-4">
-        <div>
-          <h3 className="text-[#F9B71E] text-2xl font-bold">
-            {project.title}
-          </h3>
-        </div>
+    <div className="min-h-screen text-white bg-[#1F1F1F]">
+      <header className="flex items-center justify-end py-5 px-5 lg:px-10 gap-4">
         <TopBar />
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <section className="bg-[#252525] rounded-xl p-6">
-          <h4 className="font-semibold mb-4">Project Details</h4>
-          <div className="grid grid-cols-1 gap-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
-              <label className="text-sm font-semibold md:pt-2">Project Title</label>
-              <input
-                name="title"
-                value={projectForm.title}
-                onChange={handleProjectInput}
-                className="md:col-span-2 w-full bg-white text-black rounded p-2"
-                placeholder="Project title"
-              />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
-              <label className="text-sm font-semibold md:pt-2">Game Title</label>
-              <input
-                name="gameTitle"
-                value={projectForm.gameTitle}
-                onChange={handleProjectInput}
-                className="md:col-span-2 w-full bg-white text-black rounded p-2"
-                placeholder="Game title"
-              />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
-              <label className="text-sm font-semibold md:pt-2">Game Genre</label>
-              <input
-                name="gameGenre"
-                value={projectForm.gameGenre}
-                onChange={handleProjectInput}
-                className="md:col-span-2 w-full bg-white text-black rounded p-2"
-                placeholder="Game genre"
-              />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
-              <label className="text-sm font-semibold md:pt-2">Platforms</label>
-              <input
-                name="gamePlatforms"
-                value={projectForm.gamePlatforms}
-                onChange={handleProjectInput}
-                className="md:col-span-2 w-full bg-white text-black rounded p-2"
-                placeholder="Platforms"
-              />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
-              <label className="text-sm font-semibold md:pt-2">Game Version</label>
-              <input
-                name="gameVersion"
-                value={projectForm.gameVersion}
-                onChange={handleProjectInput}
-                className="md:col-span-2 w-full bg-white text-black rounded p-2"
-                placeholder="Game version"
-              />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
-              <label className="text-sm font-semibold md:pt-2">Description</label>
-              <textarea
-                name="description"
-                value={projectForm.description}
-                onChange={handleProjectInput}
-                className="md:col-span-2 w-full bg-white text-black rounded p-2"
-                placeholder="Project description"
-              />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
-              <label className="text-sm font-semibold md:pt-2">Game Notes</label>
-              <textarea
-                name="gameNotes"
-                value={projectForm.gameNotes}
-                onChange={handleProjectInput}
-                className="md:col-span-2 w-full bg-white text-black rounded p-2"
-                placeholder="Game notes"
-              />
-            </div>
+      <div>
+        <main className="w-full lg:max-w-[1440px] mx-auto p-5 mt-5 lg:mt-20">
+          <div className="mb-10">
+            <h3 className="text-[#F9B71E] text-2xl font-bold">
+              {project.title}
+            </h3>
           </div>
-          <button
-            onClick={handleProjectSave}
-            disabled={saving}
-            className="mt-4 bg-yellow-400 text-black px-6 py-2 rounded font-semibold disabled:opacity-60"
-          >
-            {saving ? "Saving..." : "Update Project"}
-          </button>
-        </section>
 
-        <section className="bg-[#252525] rounded-xl p-6">
-          <h4 className="font-semibold mb-4">Create Questionnaire</h4>
-          <div className="grid grid-cols-1 gap-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
-              <label className="text-sm font-semibold md:pt-2">Title</label>
-              <div className="md:col-span-2 space-y-1">
-              <input
-                name="title"
-                value={questionnaireForm.title}
-                onChange={handleQuestionnaireInput}
-                className="w-full bg-white text-black rounded p-2"
-                placeholder="e.g., Alpha Build Feedback"
-              />
-              <p className="text-xs text-neutral-400">
-                Short internal name to identify this questionnaire.
-              </p>
+          <div className="flex flex-col gap-5 lg:gap-15">
+            <section className="bg-[#252525] rounded-xl p-5 lg:p-15 shadow-md ">
+              <h4 className="font-semibold mb-3 text-2xl text-gray-200">
+                Project Details
+              </h4>
+              <hr className="border-gray-500 mb-10" />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <div className="flex flex-col gap-1">
+                  <label className="text-gray-300 mb-1 font-semibold">
+                    Project Title
+                  </label>
+                  <input
+                    name="title"
+                    value={projectForm.title}
+                    onChange={handleProjectInput}
+                    className="bg-gray border border-gray-500 text-gray-200 placeholder-gray-400 focus:placeholder-gray-400 focus:border-blue-400  focus:text-gray-200 transition-colors py-3 px-5 outline-none rounded-lg mb-5"
+                    placeholder="Project title"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-gray-300 mb-1  font-semibold">
+                    Game Title
+                  </label>
+                  <input
+                    name="gameTitle"
+                    value={projectForm.gameTitle}
+                    onChange={handleProjectInput}
+                    className="bg-gray border border-gray-500 text-gray-200 placeholder-gray-400 focus:placeholder-gray-400 focus:border-blue-400  focus:text-gray-200 transition-colors py-3 px-5 outline-none rounded-lg mb-5"
+                    placeholder="Game title"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-gray-300 mb-1">Game Genre</label>
+                  <input
+                    name="gameGenre"
+                    value={projectForm.gameGenre}
+                    onChange={handleProjectInput}
+                    className="bg-gray border border-gray-500 text-gray-200 placeholder-gray-400 focus:placeholder-gray-400 focus:border-blue-400  focus:text-gray-200 transition-colors py-3 px-5 outline-none rounded-lg mb-5"
+                    placeholder="Game genre"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-gray-300 mb-1  font-semibold">
+                    Platforms
+                  </label>
+                  <input
+                    name="gamePlatforms"
+                    value={projectForm.gamePlatforms}
+                    onChange={handleProjectInput}
+                    className="bg-gray border border-gray-500 text-gray-200 placeholder-gray-400 focus:placeholder-gray-400 focus:border-blue-400  focus:text-gray-200 transition-colors py-3 px-5 outline-none rounded-lg mb-5"
+                    placeholder="Platforms"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-gray-300 mb-1 font-semibold">
+                    Game Version
+                  </label>
+                  <input
+                    name="gameVersion"
+                    value={projectForm.gameVersion}
+                    onChange={handleProjectInput}
+                    className="bg-gray border border-gray-500 text-gray-200 placeholder-gray-400 focus:placeholder-gray-400 focus:border-blue-400  focus:text-gray-200 transition-colors py-3 px-5 outline-none rounded-lg mb-5"
+                    placeholder="Game version"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-gray-300 mb-1 font-semibold">
+                    Description
+                  </label>
+                  <textarea
+                    name="description"
+                    value={projectForm.description}
+                    onChange={handleProjectInput}
+                    className="bg-gray border border-gray-500 text-gray-200 placeholder-gray-400 focus:placeholder-gray-400 focus:border-blue-400  focus:text-gray-200 transition-colors py-3 px-5 outline-none rounded-lg mb-5"
+                    placeholder="Project description"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-gray-300 mb-1 font-semibold">
+                    Game Notes
+                  </label>
+                  <textarea
+                    name="gameNotes"
+                    value={projectForm.gameNotes}
+                    onChange={handleProjectInput}
+                    className="bg-gray border border-gray-500 text-gray-200 placeholder-gray-400 focus:placeholder-gray-400 focus:border-blue-400  focus:text-gray-200 transition-colors py-3 px-5 outline-none rounded-lg mb-5"
+                    placeholder="Game notes"
+                  />
+                </div>
               </div>
-            </div>
+              <div className="flex justify-end mt-10">
+                {" "}
+                <button
+                  onClick={handleProjectSave}
+                  disabled={saving}
+                  className="bg-linear-to-r from-[#4183E8] to-[#284CC4] text-white px-10 py-3 rounded font-semibold disabled:opacity-60"
+                >
+                  {saving ? "Saving..." : "Update Project"}
+                </button>
+              </div>
+            </section>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
-              <label className="text-sm font-semibold md:pt-2">
-                Description
-              </label>
-              <div className="md:col-span-2 space-y-1">
-              <textarea
-                name="description"
-                value={questionnaireForm.description}
-                onChange={handleQuestionnaireInput}
-                className="w-full bg-white text-black rounded p-2"
-                placeholder="Explain what you want testers to focus on."
-              />
-              <p className="text-xs text-neutral-400">
-                Shown to testers at the top of the questionnaire.
-              </p>
-              </div>
-            </div>
+            <section className="bg-[#252525] rounded-xl p-5 lg:p-15 shadow-md">
+              <h4 className="font-semibold mb-3 text-2xl text-gray-200">
+                Create Questionnaire
+              </h4>
+              <hr className="border-gray-500 mb-10" />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <div className="flex flex-col gap-1">
+                  <label className="text-gray-300 mb-1 font-semibold">
+                    Title
+                  </label>
+                  <div className="md:col-span-2 space-y-2">
+                    <input
+                      name="title"
+                      value={questionnaireForm.title}
+                      onChange={handleQuestionnaireInput}
+                      className="bg-gray border border-gray-500 text-gray-200 placeholder-gray-400 focus:placeholder-gray-400 focus:border-blue-400  focus:text-gray-200 transition-colors py-3 px-5 outline-none rounded-lg w-full"
+                      placeholder="e.g., Alpha Build Feedback"
+                    />
+                    <p className="text-xs text-neutral-400">
+                      Short internal name to identify this questionnaire.
+                    </p>
+                  </div>
+                </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
-              <label className="text-sm font-semibold md:pt-2">Starts At</label>
-              <div className="md:col-span-2 space-y-1">
-              <input
-                type="datetime-local"
-                name="startsAt"
-                value={questionnaireForm.startsAt}
-                onChange={handleQuestionnaireInput}
-                className="w-full bg-white text-black rounded p-2"
-              />
-              <p className="text-xs text-neutral-400">
-                Optional. When the questionnaire becomes available.
-              </p>
-              </div>
-            </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-gray-300 mb-1 font-semibold">
+                    Description
+                  </label>
+                  <div className="md:col-span-2 space-y-1">
+                    <textarea
+                      name="description"
+                      value={questionnaireForm.description}
+                      onChange={handleQuestionnaireInput}
+                      className="bg-gray border border-gray-500 text-gray-200 placeholder-gray-400 focus:placeholder-gray-400 focus:border-blue-400  focus:text-gray-200 transition-colors py-3 px-5 outline-none rounded-lg  w-full"
+                      placeholder="Explain what you want testers to focus on."
+                    />
+                    <p className="text-xs text-neutral-400">
+                      Shown to testers at the top of the questionnaire.
+                    </p>
+                  </div>
+                </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
-              <label className="text-sm font-semibold md:pt-2">Ends At</label>
-              <div className="md:col-span-2 space-y-1">
-              <input
-                type="datetime-local"
-                name="endsAt"
-                value={questionnaireForm.endsAt}
-                onChange={handleQuestionnaireInput}
-                className="w-full bg-white text-black rounded p-2"
-              />
-              <p className="text-xs text-neutral-400">
-                Optional. When the questionnaire closes to new responses.
-              </p>
-              </div>
-            </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-gray-300 mb-1 font-semibold">
+                    Starts At
+                  </label>
+                  <div className="md:col-span-2 space-y-2">
+                    <input
+                      type="datetime-local"
+                      name="startsAt"
+                      value={questionnaireForm.startsAt}
+                      onChange={handleQuestionnaireInput}
+                      className="bg-gray border border-gray-500 text-gray-200 placeholder-gray-400 focus:placeholder-gray-400 focus:border-blue-400  focus:text-gray-200 transition-colors py-3 px-5 outline-none rounded-lg  w-full"
+                    />
+                    <p className="text-xs text-neutral-400">
+                      Optional. When the questionnaire becomes available.
+                    </p>
+                  </div>
+                </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
-              <label className="text-sm font-semibold md:pt-2">
-                Time Limit
-              </label>
-              <div className="md:col-span-2 space-y-1">
-              <input
-                name="timeLimitSeconds"
-                value={questionnaireForm.timeLimitSeconds}
-                onChange={handleQuestionnaireInput}
-                className="w-full bg-white text-black rounded p-2"
-                placeholder="Seconds per response (leave blank for no limit)"
-              />
-              <p className="text-xs text-neutral-400">
-                Sets how long testers have to complete the questionnaire.
-              </p>
-              </div>
-            </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-gray-300 mb-1 font-semibold">
+                    Ends At
+                  </label>
+                  <div className="md:col-span-2 space-y-2">
+                    <input
+                      type="datetime-local"
+                      name="endsAt"
+                      value={questionnaireForm.endsAt}
+                      onChange={handleQuestionnaireInput}
+                      className="bg-gray border border-gray-500 text-gray-200 placeholder-gray-400 focus:placeholder-gray-400 focus:border-blue-400  focus:text-gray-200 transition-colors py-3 px-5 outline-none rounded-lg w-full"
+                    />
+                    <p className="text-xs text-neutral-400">
+                      Optional. When the questionnaire closes to new responses.
+                    </p>
+                  </div>
+                </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
-              <label className="text-sm font-semibold md:pt-2">
-                Max Responses
-              </label>
-              <div className="md:col-span-2 space-y-1">
-              <input
-                name="maxResponses"
-                value={questionnaireForm.maxResponses}
-                onChange={handleQuestionnaireInput}
-                className="w-full bg-white text-black rounded p-2"
-                placeholder="Maximum submissions (leave blank for unlimited)"
-              />
-              <p className="text-xs text-neutral-400">
-                Caps how many responses you want to collect.
-              </p>
-              </div>
-            </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-gray-300 mb-1 font-semibold">
+                    Time Limit
+                  </label>
+                  <div className="md:col-span-2 space-y-2">
+                    <input
+                      name="timeLimitSeconds"
+                      value={questionnaireForm.timeLimitSeconds}
+                      onChange={handleQuestionnaireInput}
+                      className="bg-gray border border-gray-500 text-gray-200 placeholder-gray-400 focus:placeholder-gray-400 focus:border-blue-400  focus:text-gray-200 transition-colors py-3 px-5 outline-none rounded-lg  w-full"
+                      placeholder="Seconds per response (leave blank for no limit)"
+                    />
+                    <p className="text-xs text-neutral-400">
+                      Sets how long testers have to complete the questionnaire.
+                    </p>
+                  </div>
+                </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
-              <label className="text-sm font-semibold md:pt-2">Status</label>
-              <div className="md:col-span-2 space-y-1">
-              <select
-                name="statusID"
-                value={questionnaireForm.statusID}
-                onChange={handleQuestionnaireInput}
-                className="w-full bg-white text-black rounded p-2"
-              >
-                <option value={1}>Draft</option>
-                <option value={2}>Published</option>
-                <option value={3}>Archived</option>
-              </select>
-              <p className="text-xs text-neutral-400">
-                Draft is private, Published is visible, Archived is read-only.
-              </p>
+                <div className="flex flex-col gap-1">
+                  <label className="text-gray-300 mb-1 font-semibold">
+                    Max Responses
+                  </label>
+                  <div className="md:col-span-2 space-y-2">
+                    <input
+                      name="maxResponses"
+                      value={questionnaireForm.maxResponses}
+                      onChange={handleQuestionnaireInput}
+                      className="bg-gray border border-gray-500 text-gray-200 placeholder-gray-400 focus:placeholder-gray-400 focus:border-blue-400  focus:text-gray-200 transition-colors py-3 px-5 outline-none rounded-lg w-full"
+                      placeholder="Maximum submissions (leave blank for unlimited)"
+                    />
+                    <p className="text-xs text-neutral-400">
+                      Caps how many responses you want to collect.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-gray-300 mb-1 font-semibold">
+                    Status
+                  </label>
+                  <div className="md:col-span-2 space-y-2">
+                    <Select
+                      name="statusID"
+                      value={questionnaireForm.statusID}
+                      onChange={handleQuestionnaireInput}
+                      className="w-full"
+                      options={[
+                        { value: 1, label: "Draft" },
+                        { value: 2, label: "Published" },
+                        { value: 3, label: "Archived" },
+                      ]}
+                    />
+                    <p className="text-xs text-neutral-400">
+                      Draft is private, Published is visible, Archived is
+                      read-only.
+                    </p>
+                  </div>
+                </div>
               </div>
-            </div>
+              <div></div>
+              <div className="flex justify-end mt-10">
+                <button
+                  onClick={handleCreateQuestionnaire}
+                  disabled={saving}
+                  className="bg-linear-to-r from-[#4183E8] to-[#284CC4] text-white px-10 py-3 rounded font-semibolddisabled:opacity-60"
+                >
+                  {saving ? "Saving..." : "Create Questionnaire"}
+                </button>
+              </div>
+            </section>
+            <section className="bg-[#252525] rounded-xl p-5 lg:p-15 shadow-md ">
+              <h4 className="font-semibold mb-3 text-2xl text-gray-200">
+                Questionnaires
+              </h4>
+              <hr className="border-gray-500 mb-10" />
+              {project.questionnaires?.length ? (
+                <div className="space-y-3">
+                  {project.questionnaires.map((q) => (
+                    <div
+                      key={q.questionnaireID}
+                      className="flex items-center justify-between border border-neutral-800 rounded-lg p-4"
+                    >
+                      <div>
+                        <h5 className="font-semibold">{q.title}</h5>
+                        <p className="text-xs text-neutral-400">
+                          Status {q.statusID}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() =>
+                            navigate(
+                              `/client/projects/${project.projectID}/questionnaires/${q.questionnaireID}`,
+                            )
+                          }
+                          className="text-sm text-yellow-400"
+                        >
+                          <Edit size={20} />
+                        </button>
+                        <button
+                          onClick={() =>
+                            handleDeleteQuestionnaire(q.questionnaireID)
+                          }
+                          className="text-sm text-red-400"
+                        >
+                          <Trash2 size={20} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-neutral-400">
+                  No questionnaires yet.
+                </p>
+              )}
+            </section>
           </div>
-          <button
-            onClick={handleCreateQuestionnaire}
-            disabled={saving}
-            className="mt-4 bg-yellow-400 text-black px-6 py-2 rounded font-semibold disabled:opacity-60"
-          >
-            {saving ? "Saving..." : "Create Questionnaire"}
-          </button>
-        </section>
+        </main>
       </div>
-
-      <section className="mt-8 bg-[#252525] rounded-xl p-6">
-        <h4 className="font-semibold mb-4">Questionnaires</h4>
-        {project.questionnaires?.length ? (
-          <div className="space-y-3">
-            {project.questionnaires.map((q) => (
-              <div
-                key={q.questionnaireID}
-                className="flex items-center justify-between border border-neutral-800 rounded-lg p-4"
-              >
-                <div>
-                  <h5 className="font-semibold">{q.title}</h5>
-                  <p className="text-xs text-neutral-400">
-                    Status {q.statusID}
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() =>
-                      navigate(
-                        `/client/projects/${project.projectID}/questionnaires/${q.questionnaireID}`
-                      )
-                    }
-                    className="text-sm text-yellow-400"
-                  >
-                    Manage
-                  </button>
-                  <button
-                    onClick={() => handleDeleteQuestionnaire(q.questionnaireID)}
-                    className="text-sm text-red-400"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-neutral-400">No questionnaires yet.</p>
-        )}
-      </section>
     </div>
   );
 }
 
 export default ClientProjectDetail;
-
