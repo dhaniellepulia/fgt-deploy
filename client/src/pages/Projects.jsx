@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import ProjectCard from "../components/ProjectCard.jsx";
 import TopBar from "../components/layouts/TopBar.jsx";
-import { fetchProjects } from "../api/projects";
+import { fetchProjects, joinProject } from "../api/projects";
 import { useAuth } from "../auth/AuthContext";
 import {
   createClientProject,
@@ -45,6 +45,7 @@ function Projects() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [joiningProjectID, setJoiningProjectID] = useState(null);
   const [projectForm, setProjectForm] = useState({
     title: "",
     description: "",
@@ -140,6 +141,22 @@ function Projects() {
       setProjects(mapClientProjectsToItems(updated));
     } catch (err) {
       alert(err.message || "Failed to delete project");
+    }
+  };
+
+  const handleJoinProject = async (projectID) => {
+    try {
+      setJoiningProjectID(projectID);
+      await joinProject(projectID, token);
+      setProjects((prev) =>
+        prev.map((project) =>
+          project.id === projectID ? { ...project, isJoined: true } : project
+        )
+      );
+    } catch (err) {
+      alert(err.message || "Failed to join project");
+    } finally {
+      setJoiningProjectID(null);
     }
   };
 
@@ -263,35 +280,50 @@ function Projects() {
         </div>
       )}
 
-      <div className="flex gap-15 mb-6 mx-8">
-        {tabs.map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`pb-3 px-4 text-sm font-bold transition
-              ${
-                activeTab === tab
-                  ? "text-yellow-400 border-b-2 border-yellow-400"
-                  : "text-neutral-400 hover:text-white"
-              }`}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
+      {!isClientUser && (
+        <>
+          <div className="flex gap-15 mb-6 mx-8">
+            {tabs.map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`pb-3 px-4 text-sm font-bold transition
+                  ${
+                    activeTab === tab
+                      ? "text-yellow-400 border-b-2 border-yellow-400"
+                      : "text-neutral-400 hover:text-white"
+                  }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
 
-      {loading ? (
-        <p className="text-sm text-neutral-400">Loading...</p>
-      ) : error ? (
-        <p className="text-sm text-red-400">{error}</p>
-      ) : filteredProjects.length > 0 ? (
-        <div className="grid h-full bg-[#252525] p-8 rounded-xl grid-cols-1 sm:grid-cols-3 md:grid-cols-5 gap-4">
-          {filteredProjects.map((project) => (
-            <ProjectCard key={project.id} project={project} />
-          ))}
-        </div>
-      ) : (
-        <p className="text-sm text-neutral-400">No items found.</p>
+          {loading ? (
+            <p className="text-sm text-neutral-400">Loading...</p>
+          ) : error ? (
+            <p className="text-sm text-red-400">{error}</p>
+          ) : filteredProjects.length > 0 ? (
+            <div className="grid h-full bg-[#252525] p-8 rounded-xl grid-cols-1 sm:grid-cols-3 md:grid-cols-5 gap-4">
+              {filteredProjects.map((project) => {
+                const actionLabel = project.isJoined ? "Joined" : "Apply to Join";
+                return (
+                  <ProjectCard
+                    key={project.id}
+                    project={project}
+                    actionLabel={actionLabel}
+                    actionDisabled={
+                      project.isJoined || joiningProjectID === project.id
+                    }
+                    onAction={() => handleJoinProject(project.id)}
+                  />
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-neutral-400">No items found.</p>
+          )}
+        </>
       )}
     </div>
   );

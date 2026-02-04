@@ -2,17 +2,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import TopBar from "../components/layouts/TopBar.jsx";
-import { fetchProjectById } from "../api/projects";
+import { fetchProjectById, joinProject } from "../api/projects";
 import { useAuth } from "../auth/AuthContext";
-
-function formatDate(value) {
-  if (!value) return "N/A";
-  try {
-    return new Date(value).toLocaleDateString();
-  } catch {
-    return "N/A";
-  }
-}
 
 function ProjectDetail() {
   const { id } = useParams();
@@ -22,6 +13,7 @@ function ProjectDetail() {
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [joining, setJoining] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -58,22 +50,16 @@ function ProjectDetail() {
     if (!project) return [];
     return [
       {
-        label: "DURATION",
-        value: project.durationMinutes
-          ? `${project.durationMinutes} minutes`
-          : "N/A",
+        label: "GAME",
+        value: project.gameTitle || "N/A",
       },
       {
-        label: "MAX RESPONSES",
-        value: project.maxResponses ?? "N/A",
+        label: "GENRE",
+        value: project.gameGenre || "N/A",
       },
       {
-        label: "STARTS",
-        value: formatDate(project.startsAt),
-      },
-      {
-        label: "ENDS",
-        value: formatDate(project.endsAt),
+        label: "PLATFORMS",
+        value: project.gamePlatforms || "N/A",
       },
       {
         label: "STATUS",
@@ -81,6 +67,26 @@ function ProjectDetail() {
       },
     ];
   }, [project]);
+
+  const handleJoin = async () => {
+    try {
+      setJoining(true);
+      await joinProject(id, token);
+      const refreshed = await fetchProjectById(id, token);
+      setProject(refreshed.item);
+    } catch (err) {
+      alert(err.message || "Failed to join project");
+    } finally {
+      setJoining(false);
+    }
+  };
+
+  const scrollToQuestionnaires = () => {
+    const section = document.getElementById("questionnaires");
+    if (section) {
+      section.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
 
   if (loading) {
     return (
@@ -151,16 +157,63 @@ function ProjectDetail() {
               </div>
             </section>
 
-            <section>
-              <h2 className="text-xl font-bold text-white mb-6">Evolution</h2>
-              <div className="flex border border-gray-600 rounded-md overflow-hidden">
-                <div className="w-1/3 bg-[#2a2a2a] px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                  STATUS
+            <section id="questionnaires">
+              <h2 className="text-xl font-bold text-white mb-6">
+                Available Questionnaires
+              </h2>
+              {!project.isJoined ? (
+                <div className="border border-gray-600 rounded-md p-6 text-sm text-gray-300">
+                  Apply to join this project to access its published
+                  questionnaires.
                 </div>
-                <div className="w-2/3 bg-[#1e1e1e] px-4 py-3 text-sm text-white">
-                  {project.status || "N/A"}
+              ) : project.questionnaires?.length ? (
+                <div className="space-y-4">
+                  {project.questionnaires.map((questionnaire) => (
+                    <div
+                      key={questionnaire.id}
+                      className="border border-gray-700 rounded-lg p-4 bg-[#1e1e1e]"
+                    >
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <h4 className="text-white font-semibold">
+                            {questionnaire.title}
+                          </h4>
+                          <p className="text-xs text-gray-400 mt-1">
+                            {questionnaire.description || "No description."}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() =>
+                            navigate(
+                              `/projects/${id}/questionnaires/${questionnaire.id}`
+                            )
+                          }
+                          disabled={questionnaire.hasSubmitted}
+                          className="bg-[#F9B71E] text-black text-xs font-semibold px-4 py-2 rounded disabled:opacity-60"
+                        >
+                          {questionnaire.hasSubmitted
+                            ? "Completed"
+                            : "Start"}
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-4 text-xs text-gray-400 mt-3">
+                        <span>
+                          Duration:{" "}
+                          {questionnaire.durationMinutes
+                            ? `${questionnaire.durationMinutes} min`
+                            : "N/A"}
+                        </span>
+                        <span>Points: {questionnaire.pointsReward ?? 0}</span>
+                        <span>Status: {questionnaire.status}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
+              ) : (
+                <div className="border border-gray-600 rounded-md p-6 text-sm text-gray-300">
+                  No published questionnaires are available yet.
+                </div>
+              )}
             </section>
           </div>
         </div>
@@ -187,12 +240,22 @@ function ProjectDetail() {
             <p className="mb-4">{project.description || "No description."}</p>
           </div>
 
-          <button
-            onClick={() => navigate(`/projects/${id}/test`)}
-            className="mt-auto w-full bg-[#4c28a5] hover:bg-[#5d35c2] text-white py-4 rounded-2xl font-bold text-lg transition-colors shadow-lg"
-          >
-            Start Playtest
-          </button>
+          {!project.isJoined ? (
+            <button
+              onClick={handleJoin}
+              disabled={joining}
+              className="mt-auto w-full bg-[#F9B71E] hover:bg-[#c48e12] text-black py-4 rounded-2xl font-bold text-lg transition-colors shadow-lg disabled:opacity-60"
+            >
+              {joining ? "Applying..." : "Apply to Join"}
+            </button>
+          ) : (
+            <button
+              onClick={scrollToQuestionnaires}
+              className="mt-auto w-full bg-[#4c28a5] hover:bg-[#5d35c2] text-white py-4 rounded-2xl font-bold text-lg transition-colors shadow-lg"
+            >
+              View Questionnaires
+            </button>
+          )}
         </div>
       </div>
     </div>

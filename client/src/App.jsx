@@ -30,6 +30,7 @@ import PrivacyPolicy from "./pages/PlayerPolicy.jsx";
 import ProjectDetail from "./pages/ProjectDetail.jsx";
 import ProjectTest from "./pages/ProjectTest.jsx";
 import ProjectSurvey from "./pages/ProjectSurvey.jsx";
+import ProjectQuestionnaire from "./pages/ProjectQuestionnaire.jsx";
 import ImportantInformation from "./pages/ImportantInformation.jsx";
 import Download from "./pages/Download.jsx";
 import ClientProjectDetail from "./pages/ClientProjectDetail.jsx";
@@ -95,6 +96,10 @@ function App() {
         <Route path="/projects/:id" element={<ProjectDetail />} />
         <Route path="/projects/:id/test" element={<ProjectTest />} />
         <Route path="/projects/:id/survey" element={<ProjectSurvey />} />
+        <Route
+          path="/projects/:projectId/questionnaires/:questionnaireId"
+          element={<ProjectQuestionnaire />}
+        />
         {/* <Route path="/projects/:id/success" element={<ProjectSuccess />} /> */}
 
         <Route path="/sessions" element={<Sessions />} />

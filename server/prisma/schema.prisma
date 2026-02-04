@@ -98,6 +98,7 @@ model User {
 
   questionnaires  Questionnaire[] @relation("QuestionnaireClient")
   projects        Project[]
+  projectMemberships ProjectMembership[]
   responses       QuestionnaireResponse[]
   pointTransactions PointTransaction[]
   pointBalance    UserPointBalance?
@@ -165,6 +166,7 @@ model Project {
 
   client        User @relation(fields: [clientUserID], references: [userID])
   questionnaires Questionnaire[]
+  members       ProjectMembership[]
 
   @@map("tbl_projects")
 }
@@ -210,6 +212,21 @@ model Questionnaire {
   criteria  QuestionnaireCriteria[]
 
   @@map("tbl_questionnaires")
+}
+
+model ProjectMembership {
+  projectMembershipID BigInt @id @default(autoincrement()) @map("projectMembershipID")
+  projectID           BigInt @map("projectID")
+  testerUserID        BigInt @map("testerUserID")
+  joinedAt            DateTime @default(now()) @map("joinedAt")
+  createdAt           DateTime @default(now()) @map("createdAt")
+  updatedAt           DateTime @updatedAt @map("updatedAt")
+
+  project Project @relation(fields: [projectID], references: [projectID])
+  tester  User    @relation(fields: [testerUserID], references: [userID])
+
+  @@unique([projectID, testerUserID], map: "uq_project_tester")
+  @@map("tbl_project_memberships")
 }
 
 model QuestionType {
