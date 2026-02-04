@@ -35,6 +35,11 @@ import ImportantInformation from "./pages/ImportantInformation.jsx";
 import Download from "./pages/Download.jsx";
 import ClientProjectDetail from "./pages/ClientProjectDetail.jsx";
 import ClientQuestionnaireBuilder from "./pages/ClientQuestionnaireBuilder.jsx";
+import AdminRoute from "./auth/AdminRoute.jsx";
+import AccountManagement from "./pages/AdminAccountManagement.jsx";
+import RegistrationApproval from "./pages/AdminRegistrationApproval.jsx";
+import ProjectManagement from "./pages/AdminProjectManagement.jsx";
+import Reports from "./pages/AdminReports.jsx";
 function App() {
   return (
     <Routes>
@@ -116,6 +121,24 @@ function App() {
           path="/client/projects/:projectId/questionnaires/:questionnaireId"
           element={<ClientQuestionnaireBuilder />}
         />
+      </Route>
+
+      <Route
+        element={
+          <ProtectedRoute>
+            <AdminRoute>
+              <AppLayout />
+            </AdminRoute>
+          </ProtectedRoute>
+        }
+      >
+        <Route path="/admin/accounts" element={<AccountManagement />} />
+        <Route
+          path="/admin/registrationapproval"
+          element={<RegistrationApproval />}
+        />
+        <Route path="/admin/projects" element={<ProjectManagement />} />
+        <Route path="/admin/reports" element={<Reports />} />
       </Route>
     </Routes>
   );

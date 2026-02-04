@@ -33,6 +33,12 @@ export default function ProtectedRoute({ children }) {
     return <Navigate to="/" replace />;
   }
 
+  // allow admin by email to bypass onboarding (dev only)
+  const isAdmin =
+    typeof user.email === "string" &&
+    user.email.toLowerCase() === "admin@gmail.com";
+  if (isAdmin) return children;
+
   const roleID = user.roleID?.toString();
   const isClient = roleID === "3" || roleID === "1";
 
@@ -47,8 +53,7 @@ export default function ProtectedRoute({ children }) {
 
   const isCurrentlyOnboarding = location.pathname.startsWith("/onboarding");
   const isClientOnboarding = location.pathname.startsWith("/onboarding/client");
-  const isPlaytesterOnboarding =
-    isCurrentlyOnboarding && !isClientOnboarding;
+  const isPlaytesterOnboarding = isCurrentlyOnboarding && !isClientOnboarding;
 
   if (isClient && isPlaytesterOnboarding) {
     return <Navigate to="/onboarding/client" replace />;
@@ -59,7 +64,9 @@ export default function ProtectedRoute({ children }) {
   }
 
   if (isOnboardingIncomplete && !isCurrentlyOnboarding) {
-    return <Navigate to={isClient ? "/onboarding/client" : "/onboarding"} replace />;
+    return (
+      <Navigate to={isClient ? "/onboarding/client" : "/onboarding"} replace />
+    );
   }
 
   if (!isOnboardingIncomplete && isCurrentlyOnboarding) {
