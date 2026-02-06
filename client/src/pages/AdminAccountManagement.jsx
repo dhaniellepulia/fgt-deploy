@@ -1,8 +1,10 @@
+//Changes get saved only in state
 import React, { useMemo, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import TopBar from "../components/layouts/TopBar";
 import OverlayModal from "../components/OverlayModal";
 import { countries } from "../data/countries";
+import ConfirmDialog from "../components/ConfirmDialog";
 
 const fmt = (v) => {
   if (!v) return "";
@@ -16,15 +18,15 @@ const getCountryName = (code) => {
   return found ? found.name : code;
 };
 
-// Mock data (shaped like User model fields)
+// Mock data
 const initialPlaytesters = [
   {
     userID: 1,
     email: "tester1@example.com",
     roleID: 2,
     userStatusID: 1,
-    firstName: "Ana",
-    lastName: "Reyes",
+    firstName: "Tester",
+    lastName: "1",
     phoneNumber: "+639171234567",
     countryResidenceCode: "PH",
     spokenLanguages: ["English", "Filipino"],
@@ -36,8 +38,8 @@ const initialPlaytesters = [
     email: "tester2@example.com",
     roleID: 2,
     userStatusID: 1,
-    firstName: "Min",
-    lastName: "Park",
+    firstName: "Tester",
+    lastName: "2",
     phoneNumber: "+821012345678",
     countryResidenceCode: "KR",
     spokenLanguages: ["Korean", "English"],
@@ -49,8 +51,8 @@ const initialPlaytesters = [
     email: "tester3@example.com",
     roleID: 2,
     userStatusID: 1,
-    firstName: "Hiro",
-    lastName: "Sato",
+    firstName: "Tester",
+    lastName: "3",
     phoneNumber: null,
     countryResidenceCode: "JP",
     spokenLanguages: ["Japanese"],
@@ -62,8 +64,8 @@ const initialPlaytesters = [
     email: "tester4@example.com",
     roleID: 2,
     userStatusID: 1,
-    firstName: "Li",
-    lastName: "Wang",
+    firstName: "Tester",
+    lastName: "4",
     phoneNumber: null,
     countryResidenceCode: "CN",
     spokenLanguages: ["Mandarin"],
@@ -78,8 +80,8 @@ const initialClients = [
     email: "client1@example.com",
     roleID: 3,
     userStatusID: 1,
-    firstName: "Studio",
-    lastName: "Aurora",
+    firstName: "Client",
+    lastName: "1",
     phoneNumber: "+442071234567",
     countryResidenceCode: "GB",
     spokenLanguages: ["English"],
@@ -91,8 +93,8 @@ const initialClients = [
     email: "client2@example.com",
     roleID: 3,
     userStatusID: 1,
-    firstName: "Nebula",
-    lastName: "Games",
+    firstName: "Client",
+    lastName: "2",
     phoneNumber: null,
     countryResidenceCode: "US",
     spokenLanguages: ["English"],
@@ -102,14 +104,14 @@ const initialClients = [
 ];
 
 export default function AdminAccountManagement() {
-  const [tab, setTab] = useState("playtester"); // playtester | client
+  const [tab, setTab] = useState("playtester");
   const [playtesters, setPlaytesters] = useState(initialPlaytesters);
   const [clients, setClients] = useState(initialClients);
 
   const [sortBy, setSortBy] = useState("userID");
   const [direction, setDirection] = useState("asc");
 
-  const [selectedUser, setSelectedUser] = useState(null); // user object for edit
+  const [selectedUser, setSelectedUser] = useState(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [addForm, setAddForm] = useState({
     email: "",
@@ -117,9 +119,12 @@ export default function AdminAccountManagement() {
     lastName: "",
     phoneNumber: "",
     countryResidenceCode: "",
+    password: "",
   });
 
-  // For edit modal we keep an editable copy
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmPayload, setConfirmPayload] = useState(null);
+
   const [editCopy, setEditCopy] = useState(null);
 
   const activeList = tab === "playtester" ? playtesters : clients;
@@ -174,6 +179,7 @@ export default function AdminAccountManagement() {
       lastName: "",
       phoneNumber: "",
       countryResidenceCode: "",
+      password: "",
     });
     setIsAddOpen(true);
   };
@@ -199,18 +205,33 @@ export default function AdminAccountManagement() {
     setIsAddOpen(false);
   };
 
+  const requestRemoveAccount = (userID, email) => {
+    setConfirmPayload({ type: "remove", userID, email });
+    setConfirmOpen(true);
+  };
+
   const removeAccount = (userID) => {
-    if (!confirm("Remove this account from list?")) return;
     if (tab === "playtester")
       setPlaytesters((p) => p.filter((u) => u.userID !== userID));
     else setClients((c) => c.filter((u) => u.userID !== userID));
     closeEdit();
+    setConfirmOpen(false);
+    setConfirmPayload(null);
   };
 
+  const requestSaveEdit = () => {
+    setConfirmPayload({ type: "save" });
+    setConfirmOpen(true);
+  };
+
+  const requestCreateAccount = () => {
+    setConfirmPayload({ type: "create", email: addForm.email || "" });
+    setConfirmOpen(true);
+  };
   return (
     <div className="min-h-screen">
-      <header className="flex w-full items-center justify-between py-6 gap-4">
-        <div>
+      <header className="flex w-full item-start justify-start lg:items-center lg:justify-between flex-col-reverse lg:flex-row py-5 lg:py-15 py-15 gap-4">
+        <div className="flex items-center gap-4">
           <h2 className="text-[#F9B71E] font-bold text-2xl">
             Account Management
           </h2>
@@ -218,31 +239,34 @@ export default function AdminAccountManagement() {
         <TopBar />
       </header>
 
-      <div className="rounded-xl bg-[#252525] p-6">
+      <div className="mb-5 flex gap-3">
+        <button
+          onClick={() => setTab("playtester")}
+          className={`px-3 pb-2 text-sm ${tab === "playtester" ? "text-[#F9B71E] border-b-2 border-[#F9B71E]" : "text-gray-300"}`}
+        >
+          Playtester
+        </button>
+        <button
+          onClick={() => setTab("client")}
+          className={`px-3 pb-2 text-sm ${tab === "client" ? "text-[#F9B71E] border-b-2 border-[#F9B71E]" : "text-gray-300"}`}
+        >
+          Client
+        </button>
+      </div>
+      <div className="rounded-xl bg-[#252525] p-8">
         <div className="flex items-center justify-start gap-6 mb-6">
-          <button
-            onClick={() => setTab("playtester")}
-            className={`px-3 pb-2 text-sm ${tab === "playtester" ? "text-[#F9B71E] border-b-2 border-[#F9B71E]" : "text-gray-300"}`}
-          >
-            Playtester
-          </button>
-          <button
-            onClick={() => setTab("client")}
-            className={`px-3 pb-2 text-sm ${tab === "client" ? "text-[#F9B71E] border-b-2 border-[#F9B71E]" : "text-gray-300"}`}
-          >
-            Client
-          </button>
-          <div className="flex-1" />
-          <button
-            onClick={openAdd}
-            className="ml-2 bg-gradient-to-r from-[#4183E8] to-[#284CC4] text-white px-4 py-2 rounded text-sm"
-          >
-            + Add a new {tab === "playtester" ? "Playtester" : "Client"}
-          </button>
+          <h4 className="text-white text-xl font-bold">Accounts</h4>
         </div>
 
-        <div className="flex justify-between items-center mb-4">
-          <h4 className="text-white text-xl font-bold">Accounts</h4>
+        <div className="flex flex-col-reverse lg:flex-row item-start justify-start lg:items-center lg:justify-between gap-3 mb-10">
+          <div>
+            <button
+              onClick={openAdd}
+              className=" bg-gradient-to-r from-[#4183E8] to-[#284CC4] text-white px-4 py-2 rounded text-sm"
+            >
+              + Add a new {tab === "playtester" ? "Playtester" : "Client"}
+            </button>
+          </div>
 
           <div className="flex items-center gap-3">
             <label className="text-sm text-gray-300">Sort by</label>
@@ -285,52 +309,65 @@ export default function AdminAccountManagement() {
           <div className="col-span-4">Registered At</div>
         </div>
 
-        <div className="space-y-2">
-          {sortedList.map((u) => (
-            <div
-              key={u.userID}
-              role="button"
-              tabIndex={0}
-              onClick={() => openRow(u)}
-              onKeyDown={(e) => e.key === "Enter" && openRow(u)}
-              className="grid grid-cols-12 items-center rounded-lg border border-[#ffffff49] text-sm bg-[#1F1F1F] cursor-pointer hover:shadow-lg hover:bg-gray-800"
-            >
-              <div className="col-span-1 p-4 border-r border-[#ffffff49] bg-[#323232] text-neutral-300 font-medium whitespace-nowrap rounded-bl-lg rounded-tl-lg ">
-                {u.userID}
-              </div>
+        <div className="space-y-2 overflow-x-scroll lg:overflow-hidden">
+          <div className="space-y-2 w-max lg:w-full">
+            {sortedList.map((u) => (
+              <div
+                key={u.userID}
+                role="button"
+                tabIndex={0}
+                onClick={() => openRow(u)}
+                onKeyDown={(e) => e.key === "Enter" && openRow(u)}
+                className="grid grid-cols-12 items-center rounded-lg border border-[#ffffff49] text-sm bg-[#1F1F1F] cursor-pointer hover:shadow-lg hover:bg-gray-800"
+              >
+                <div className="col-span-1 p-4 border-r border-[#ffffff49] bg-[#323232] text-neutral-300 font-medium whitespace-nowrap rounded-bl-lg rounded-tl-lg ">
+                  {u.userID}
+                </div>
 
-              <div className="col-span-4 p-4 border-neutral-700/50 text-neutral-300">
-                {u.email}
-              </div>
+                <div className="col-span-4 p-4 border-neutral-700/50 text-neutral-300">
+                  {u.email}
+                </div>
 
-              <div className="col-span-3 text-gray-300 text-sm">
-                {getCountryName(u.countryResidenceCode)}
-              </div>
+                <div className="col-span-3 text-gray-300 text-sm">
+                  {getCountryName(u.countryResidenceCode)}
+                </div>
 
-              <div className="col-span-4 text-gray-300 text-[12px]">
-                {fmt(u.createdAt)}
+                <div className="col-span-4 text-gray-300 text-[12px]">
+                  {fmt(u.createdAt)}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Add Account Modal */}
       <OverlayModal
         isOpen={isAddOpen}
         onClose={() => setIsAddOpen(false)}
         title={`Add ${tab === "playtester" ? "Playtester" : "Client"}`}
       >
         <div className="space-y-4">
-          <div>
-            <label className="text-xs text-neutral-400">Email</label>
-            <input
-              value={addForm.email}
-              onChange={(e) =>
-                setAddForm((s) => ({ ...s, email: e.target.value }))
-              }
-              className="w-full mt-1 p-2 bg-[#1e1e1e] border border-gray-700 rounded text-gray-300"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-neutral-400">Email</label>
+              <input
+                value={addForm.email}
+                onChange={(e) =>
+                  setAddForm((s) => ({ ...s, email: e.target.value }))
+                }
+                className="w-full mt-1 p-2 bg-[#1e1e1e] border border-gray-700 rounded text-gray-300"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-neutral-400">Password</label>
+              <input
+                value={addForm.password}
+                onChange={(e) =>
+                  setAddForm((s) => ({ ...s, password: e.target.value }))
+                }
+                className="w-full mt-1 p-2 bg-[#1e1e1e] border border-gray-700 rounded text-gray-300"
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -365,8 +402,8 @@ export default function AdminAccountManagement() {
               />
             </div>
             <div>
-              <label className="text-xs text-neutral-400">Country Code</label>
-              <input
+              <label className="text-xs text-neutral-400">Country</label>
+              <select
                 value={addForm.countryResidenceCode}
                 onChange={(e) =>
                   setAddForm((s) => ({
@@ -374,9 +411,15 @@ export default function AdminAccountManagement() {
                     countryResidenceCode: e.target.value,
                   }))
                 }
-                placeholder="e.g. PH, US"
                 className="w-full mt-1 p-2 bg-[#1e1e1e] border border-gray-700 rounded text-gray-300"
-              />
+              >
+                <option value="">Select a country</option>
+                {countries.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.name} ({c.code})
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -388,7 +431,7 @@ export default function AdminAccountManagement() {
               Cancel
             </button>
             <button
-              onClick={createAccount}
+              onClick={requestCreateAccount}
               className="bg-gradient-to-r from-[#4183E8] to-[#284CC4] text-white px-4 py-2 rounded font-semibold"
             >
               Create
@@ -397,7 +440,6 @@ export default function AdminAccountManagement() {
         </div>
       </OverlayModal>
 
-      {/* Edit / Details Modal */}
       {selectedUser && editCopy && (
         <OverlayModal
           isOpen={!!selectedUser}
@@ -418,14 +460,17 @@ export default function AdminAccountManagement() {
               </div>
 
               <div>
-                <div className="text-xs text-neutral-400">Phone</div>
+                {" "}
+                <div className="text-xs text-neutral-400">Password</div>{" "}
                 <input
-                  value={editCopy.phoneNumber || ""}
+                  type="password"
+                  value={editCopy.password || ""}
                   onChange={(e) =>
-                    setEditCopy((p) => ({ ...p, phoneNumber: e.target.value }))
+                    setEditCopy((p) => ({ ...p, password: e.target.value }))
                   }
+                  placeholder="Set new password"
                   className="w-full mt-1 p-2 bg-[#1e1e1e] border border-gray-700 rounded text-gray-300"
-                />
+                />{" "}
               </div>
 
               <div>
@@ -449,10 +494,19 @@ export default function AdminAccountManagement() {
                   className="w-full mt-1 p-2 bg-[#1e1e1e] border border-gray-700 rounded text-gray-300"
                 />
               </div>
-
+              <div>
+                <div className="text-xs text-neutral-400">Phone</div>
+                <input
+                  value={editCopy.phoneNumber || ""}
+                  onChange={(e) =>
+                    setEditCopy((p) => ({ ...p, phoneNumber: e.target.value }))
+                  }
+                  className="w-full mt-1 p-2 bg-[#1e1e1e] border border-gray-700 rounded text-gray-300"
+                />
+              </div>
               <div>
                 <div className="text-xs text-neutral-400">Country</div>
-                <input
+                <select
                   value={editCopy.countryResidenceCode || ""}
                   onChange={(e) =>
                     setEditCopy((p) => ({
@@ -460,9 +514,15 @@ export default function AdminAccountManagement() {
                       countryResidenceCode: e.target.value,
                     }))
                   }
-                  placeholder="Country code"
                   className="w-full mt-1 p-2 bg-[#1e1e1e] border border-gray-700 rounded text-gray-300"
-                />
+                >
+                  <option value="">Select a country</option>
+                  {countries.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.name} ({c.code})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -512,7 +572,7 @@ export default function AdminAccountManagement() {
               </div>
 
               <div>
-                <div className="text-xs text-neutral-400">Registered</div>
+                <div className="text-xs text-neutral-400 mb-2">Registered</div>
                 <div className="font-semibold text-white">
                   {fmt(editCopy.createdAt)}
                 </div>
@@ -522,7 +582,9 @@ export default function AdminAccountManagement() {
             <div className="flex justify-between items-center gap-3 mt-4">
               <div>
                 <button
-                  onClick={() => removeAccount(editCopy.userID)}
+                  onClick={() =>
+                    requestRemoveAccount(editCopy.userID, editCopy.email)
+                  }
                   className="px-3 py-2 bg-transparent border border-gray-700 text-red-400 rounded text-sm hover:bg-[#2a2a2a]"
                 >
                   Remove
@@ -537,7 +599,7 @@ export default function AdminAccountManagement() {
                   Cancel
                 </button>
                 <button
-                  onClick={saveEdit}
+                  onClick={requestSaveEdit}
                   className="bg-gradient-to-r from-[#4183E8] to-[#284CC4] text-white px-4 py-2 rounded font-semibold"
                 >
                   Save Changes
@@ -547,6 +609,53 @@ export default function AdminAccountManagement() {
           </div>
         </OverlayModal>
       )}
+
+      <ConfirmDialog
+        isOpen={confirmOpen}
+        title={
+          confirmPayload?.type === "remove"
+            ? "Remove Account"
+            : confirmPayload?.type === "save"
+              ? "Save Changes"
+              : confirmPayload?.type === "create"
+                ? "Create Account"
+                : "Confirm"
+        }
+        message={
+          confirmPayload?.type === "remove"
+            ? `Remove account ${confirmPayload.email}? This cannot be undone.`
+            : confirmPayload?.type === "save"
+              ? "Apply changes to this account?"
+              : confirmPayload?.type === "create"
+                ? `Create account ${confirmPayload.email || ""}?`
+                : ""
+        }
+        confirmLabel={
+          confirmPayload?.type === "remove"
+            ? "Remove"
+            : confirmPayload?.type === "create"
+              ? "Create"
+              : "Confirm"
+        }
+        danger={confirmPayload?.type === "remove"}
+        onConfirm={() => {
+          if (confirmPayload?.type === "remove") {
+            removeAccount(confirmPayload.userID);
+          } else if (confirmPayload?.type === "save") {
+            saveEdit();
+            setConfirmOpen(false);
+            setConfirmPayload(null);
+          } else if (confirmPayload?.type === "create") {
+            createAccount();
+            setConfirmOpen(false);
+            setConfirmPayload(null);
+          }
+        }}
+        onCancel={() => {
+          setConfirmOpen(false);
+          setConfirmPayload(null);
+        }}
+      />
     </div>
   );
 }

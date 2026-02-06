@@ -1,8 +1,9 @@
-//Changes get saved only in state
+﻿//Changes get saved only in state
 import React, { useMemo, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import TopBar from "../components/layouts/TopBar";
 import OverlayModal from "../components/OverlayModal";
+import ConfirmDialog from "../components/ConfirmDialog";
 
 const initialProjects = [
   {
@@ -104,12 +105,11 @@ const fmt = (v) => {
 
 export default function AdminProjectManagement() {
   const [projects, setProjects] = useState(initialProjects);
-  const [sortBy, setSortBy] = useState("projectID"); // projectID | client | createdAt
+  const [sortBy, setSortBy] = useState("projectID");
   const [direction, setDirection] = useState("asc");
   const [selectedProject, setSelectedProject] = useState(null);
   const [editProject, setEditProject] = useState(null);
 
-  // new project modal state
   const [showAddProject, setShowAddProject] = useState(false);
   const [newProjectTitle, setNewProjectTitle] = useState("");
   const [newProjectClient, setNewProjectClient] = useState("");
@@ -121,7 +121,9 @@ export default function AdminProjectManagement() {
   const [newGameNotes, setNewGameNotes] = useState("");
   const [newImage, setNewImage] = useState("");
 
-  // questionnaire builder modal state inside project modal
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmPayload, setConfirmPayload] = useState(null);
+
   const [showAddQuestionnaire, setShowAddQuestionnaire] = useState(false);
   const [qTitle, setQTitle] = useState("");
   const [qDesc, setQDesc] = useState("");
@@ -175,7 +177,7 @@ export default function AdminProjectManagement() {
   const openProject = (p) => {
     setSelectedProject(p);
     setEditProject({ ...p });
-    // if project has a questionnaire, prefill builder state for quick edit when requested
+
     const existing = p.questionnaires?.[0] ?? null;
     if (existing) {
       setEditingQuestionnaire(false);
@@ -247,8 +249,45 @@ export default function AdminProjectManagement() {
     closeModal();
   };
 
+  const deleteProject = (projectID) => {
+    setProjects((prev) => prev.filter((p) => p.projectID !== projectID));
+    closeModal();
+  };
+
+  const requestConfirm = (payload) => {
+    setConfirmPayload(payload);
+    setConfirmOpen(true);
+  };
+
+  const handleConfirm = () => {
+    if (!confirmPayload) return;
+    const { type, projectID } = confirmPayload;
+
+    if (type === "deleteProject") {
+      setProjects((prev) => prev.filter((p) => p.projectID !== projectID));
+      closeModal();
+    } else if (type === "saveProject") {
+      if (editProject) {
+        setProjects((prev) =>
+          prev.map((p) =>
+            p.projectID === editProject.projectID ? { ...editProject } : p,
+          ),
+        );
+        setSelectedProject({ ...editProject });
+        setEditProject({ ...editProject });
+        closeModal();
+      }
+    } else if (type === "saveQuestionnaire") {
+      createOrUpdateQuestionnaire(projectID);
+    } else if (type === "createProject") {
+      createProject();
+    }
+
+    setConfirmOpen(false);
+    setConfirmPayload(null);
+  };
+
   const openAddQuestionnaire = () => {
-    // if questionnaire exists for selectedProject, open builder in edit mode
     const existing = selectedProject?.questionnaires?.[0] ?? null;
     if (existing) {
       loadQuestionnaireToBuilder(existing);
@@ -288,12 +327,11 @@ export default function AdminProjectManagement() {
     setQQuestions((q.questions || []).map((qq) => ({ ...qq })));
   }
 
-  // questionnaire builder helpers
   const addQuestion = () => {
     const q = {
       id: `q_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
       text: "",
-      type: "single", // 'single' | 'multiple' | 'text'
+      type: "single",
       points: 0,
       options: ["", ""],
     };
@@ -375,13 +413,10 @@ export default function AdminProjectManagement() {
 
     setProjects((prev) =>
       prev.map((p) =>
-        p.projectID === projectID
-          ? { ...p, questionnaires: [payload] } // enforce single questionnaire per project
-          : p,
+        p.projectID === projectID ? { ...p, questionnaires: [payload] } : p,
       ),
     );
 
-    // update selected/edit project to reflect new questionnaire
     if (editProject && editProject.projectID === projectID) {
       setEditProject((ep) => ({ ...(ep || {}), questionnaires: [payload] }));
       setSelectedProject((sp) => ({
@@ -396,27 +431,31 @@ export default function AdminProjectManagement() {
 
   return (
     <div className="min-h-screen">
-      <header className="flex w-full items-center justify-between py-15 gap-4">
+      <header className="flex w-full item-start justify-start lg:items-center lg:justify-between flex-col-reverse lg:flex-row py-5 lg:py-15 gap-4">
         <div className="flex items-center gap-4">
           <h2 className="text-[#F9B71E] font-bold text-2xl">
             Project Management
           </h2>
-          <button
-            onClick={openAddProject}
-            className="ml-2 bg-gradient-to-r from-[#4183E8] to-[#284CC4] text-white px-4 py-2 rounded text-sm"
-          >
-            Add Project
-          </button>
         </div>
         <TopBar />
       </header>
 
       <div className="rounded-xl bg-[#252525] p-8">
         <div className="flex justify-between items-center mb-10">
-          <h4 className="text-white text-xl font-bold mb-8">Projects</h4>
+          <h4 className="text-white text-xl font-bold">Projects</h4>
+        </div>
 
-          <div className="flex items-center gap-3">
-            <label className="text-sm text-gray-300">Sort by</label>
+        <div className="flex flex-col-reverse lg:flex-row item-start justify-start lg:items-center lg:justify-between gap-3 mb-10">
+          <div>
+            <button
+              onClick={openAddProject}
+              className="bg-gradient-to-r from-[#4183E8] to-[#284CC4] text-white px-4 py-2 rounded text-sm"
+            >
+              + Add Project
+            </button>
+          </div>
+          <div className="flex items-center">
+            <label className="text-sm text-gray-300 mr-2">Sort by</label>
             <div className="relative inline-block">
               <select
                 value={sortBy}
@@ -432,7 +471,6 @@ export default function AdminProjectManagement() {
                 className="absolute right-2 top-1/2 transform -translate-y-1/2 text-[#F9B71E] pointer-events-none"
               />
             </div>
-
             <button
               onClick={() =>
                 setDirection((d) => (d === "asc" ? "desc" : "asc"))
@@ -448,7 +486,6 @@ export default function AdminProjectManagement() {
             </button>
           </div>
         </div>
-
         <div className="grid grid-cols-12 px-4 mb-4 text-sm font-bold text-neutral-500 uppercase tracking-wide">
           <div className="col-span-1">ID</div>
           <div className="col-span-5 px-4">Title</div>
@@ -456,37 +493,38 @@ export default function AdminProjectManagement() {
           <div className="col-span-3">Created At</div>
         </div>
 
-        <div className="space-y-2">
-          {sorted.map((p) => (
-            <div
-              key={p.projectID}
-              role="button"
-              tabIndex={0}
-              onClick={() => openProject(p)}
-              onKeyDown={(e) => e.key === "Enter" && openProject(p)}
-              className="grid grid-cols-12 items-center rounded-lg border border-[#ffffff49] text-sm bg-[#1F1F1F] cursor-pointer hover:shadow-lg hover:bg-gray-800"
-            >
-              <div className="col-span-1 p-4 border-r border-[#ffffff49] bg-[#323232] text-neutral-300 font-medium whitespace-nowrap rounded-bl-lg rounded-tl-lg ">
-                {p.projectID}
-              </div>
+        <div className="space-y-2 overflow-x-scroll lg:overflow-hidden">
+          <div className="space-y-2 w-max lg:w-full">
+            {sorted.map((p) => (
+              <div
+                key={p.projectID}
+                role="button"
+                tabIndex={0}
+                onClick={() => openProject(p)}
+                onKeyDown={(e) => e.key === "Enter" && openProject(p)}
+                className="grid grid-cols-12 items-center rounded-lg border border-[#ffffff49] text-sm bg-[#1F1F1F] cursor-pointer hover:shadow-lg hover:bg-gray-800"
+              >
+                <div className="col-span-1 p-4 border-r border-[#ffffff49] bg-[#323232] text-neutral-300 font-medium whitespace-nowrap rounded-bl-lg rounded-tl-lg ">
+                  {p.projectID}
+                </div>
 
-              <div className="col-span-5 p-4 border-neutral-700/50 text-neutral-300">
-                {p.title}
-              </div>
+                <div className="col-span-5 p-4 border-neutral-700/50 text-neutral-300">
+                  {p.title}
+                </div>
 
-              <div className="col-span-3 text-gray-300 text-sm">
-                {p.clientName}
-              </div>
+                <div className="col-span-3 text-gray-300 text-sm">
+                  {p.clientName}
+                </div>
 
-              <div className="col-span-3 text-gray-300 text-[12px]">
-                {fmt(p.createdAt)}
+                <div className="col-span-3 text-gray-300 text-[12px]">
+                  {fmt(p.createdAt)}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Add Project Modal */}
       <OverlayModal
         isOpen={showAddProject}
         onClose={() => setShowAddProject(false)}
@@ -567,7 +605,7 @@ export default function AdminProjectManagement() {
                 type="file"
                 accept="image/*"
                 onChange={handleNewImageFile}
-                className="w-full mt-1 text-sm text-gray-300"
+                className="w-full mt-1 text-sm text-gray-300 cursor-pointer"
               />
               {newImage ? (
                 <img
@@ -591,7 +629,7 @@ export default function AdminProjectManagement() {
               Cancel
             </button>
             <button
-              onClick={createProject}
+              onClick={() => requestConfirm({ type: "createProject" })}
               className="bg-gradient-to-r from-[#4183E8] to-[#284CC4] text-white px-4 py-2 rounded font-semibold"
             >
               Create Project
@@ -600,7 +638,6 @@ export default function AdminProjectManagement() {
         </div>
       </OverlayModal>
 
-      {/* Project Details Modal */}
       {selectedProject && editProject && (
         <OverlayModal
           isOpen={!!selectedProject}
@@ -852,21 +889,20 @@ export default function AdminProjectManagement() {
                         </div>
                       </div>
                       <div className="text-xs text-neutral-400">
-                        {fmt(q.createdAt)} •{" "}
-                        {q.questions ? `${q.questions.length} questions` : "—"}
+                        {fmt(q.createdAt)}{" "}
+                        {q.questions ? `${q.questions.length} questions` : ""}
                       </div>
                     </div>
                     <div className="mt-2 text-sm text-gray-300">
-                      Reward: {q.pointsReward} pts • Responses:{" "}
-                      {q.maxResponses ?? "—"} • Time limit:{" "}
-                      {q.timeLimitSeconds ?? "—"}s
+                      Reward: {q.pointsReward} pts Responses:{" "}
+                      {q.maxResponses ?? ""} Time limit:{" "}
+                      {q.timeLimitSeconds ?? ""}s
                     </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Add/Edit Questionnaire Modal (builder) */}
             {showAddQuestionnaire && (
               <OverlayModal
                 isOpen={showAddQuestionnaire}
@@ -1091,7 +1127,10 @@ export default function AdminProjectManagement() {
                     </button>
                     <button
                       onClick={() =>
-                        createOrUpdateQuestionnaire(editProject.projectID)
+                        requestConfirm({
+                          type: "saveQuestionnaire",
+                          projectID: editProject.projectID,
+                        })
                       }
                       className="bg-gradient-to-r from-[#4183E8] to-[#284CC4] text-white px-4 py-2 rounded font-semibold"
                     >
@@ -1102,23 +1141,68 @@ export default function AdminProjectManagement() {
               </OverlayModal>
             )}
 
-            <div className="flex justify-end gap-3 mt-2">
-              <button
-                onClick={closeModal}
-                className="bg-[#2a2a2a] px-4 py-2 rounded text-gray-300"
-              >
-                Close
-              </button>
-              <button
-                onClick={saveProject}
-                className="bg-gradient-to-r from-[#4183E8] to-[#284CC4] text-white px-4 py-2 rounded font-semibold"
-              >
-                Save Changes
-              </button>
+            <div className="flex justify-between items-center gap-3 mt-2">
+              <div>
+                <button
+                  onClick={() =>
+                    requestConfirm({
+                      type: "deleteProject",
+                      projectID: editProject.projectID,
+                      title: editProject.title,
+                    })
+                  }
+                  className="px-4 py-2 bg-transparent border border-gray-700 text-red-400 rounded text-sm hover:bg-[#2a2a2a]"
+                >
+                  Delete Project
+                </button>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={closeModal}
+                  className="bg-[#2a2a2a] px-4 py-2 rounded text-gray-300"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => requestConfirm({ type: "saveProject" })}
+                  className="bg-gradient-to-r from-[#4183E8] to-[#284CC4] text-white px-4 py-2 rounded font-semibold"
+                >
+                  Save Changes
+                </button>
+              </div>
             </div>
           </div>
         </OverlayModal>
       )}
+
+      <ConfirmDialog
+        isOpen={confirmOpen}
+        title={
+          confirmPayload?.title
+            ? `Confirm: ${confirmPayload.title}`
+            : "Confirm action"
+        }
+        message={
+          confirmPayload?.type === "deleteProject"
+            ? "Delete this project? This cannot be undone."
+            : confirmPayload?.type === "saveProject"
+              ? "Save changes to this project?"
+              : confirmPayload?.type === "saveQuestionnaire"
+                ? "Save questionnaire for this project?"
+                : confirmPayload?.type === "createProject"
+                  ? "Create project with the entered details?"
+                  : "Are you sure?"
+        }
+        confirmLabel="Confirm"
+        cancelLabel="Cancel"
+        danger={confirmPayload?.type === "deleteProject"}
+        onConfirm={handleConfirm}
+        onCancel={() => {
+          setConfirmOpen(false);
+          setConfirmPayload(null);
+        }}
+      />
     </div>
   );
 }

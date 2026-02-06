@@ -1,8 +1,10 @@
+//Changes get saved only in state
 import React, { useMemo, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import TopBar from "../components/layouts/TopBar";
 import OverlayModal from "../components/OverlayModal";
 import { countries } from "../data/countries";
+import ConfirmDialog from "../components/ConfirmDialog";
 
 // Mockup users
 const initialUsers = [
@@ -194,7 +196,8 @@ function AdminRegistrationApproval() {
   const [sortBy, setSortBy] = useState("userID");
   const [direction, setDirection] = useState("asc");
   const [selectedUser, setSelectedUser] = useState(null);
-
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmPayload, setConfirmPayload] = useState(null);
   const sortedUsers = useMemo(() => {
     const arr = [...users];
     const cmp = (a, b) => {
@@ -222,14 +225,38 @@ function AdminRegistrationApproval() {
   const openUser = (user) => setSelectedUser(user);
   const closeModal = () => setSelectedUser(null);
 
-  const approveUser = () => {
+  const requestApproveUser = (userID, email) => {
+    setConfirmPayload({ type: "approve", userID, email });
+    setConfirmOpen(true);
+  };
+
+  const requestDisapproveUser = (userID, email) => {
+    setConfirmPayload({ type: "disapprove", userID, email });
+    setConfirmOpen(true);
+  };
+
+  const approveUser = (userID) => {
+    setUsers((prev) =>
+      prev.map((u) => (u.userID === userID ? { ...u, userStatusID: 1 } : u)),
+    );
+    setConfirmOpen(false);
+    setConfirmPayload(null);
+    closeModal();
+  };
+
+  const disapproveUser = (userID) => {
+    setUsers((prev) =>
+      prev.map((u) => (u.userID === userID ? { ...u, userStatusID: 3 } : u)),
+    );
+    setConfirmOpen(false);
+    setConfirmPayload(null);
     closeModal();
   };
 
   return (
     <div className="min-h-screen">
-      <header className="flex w-full items-center justify-between py-15 gap-4">
-        <div>
+      <header className="flex w-full item-start justify-start lg:items-center lg:justify-between flex-col-reverse lg:flex-row py-5 lg:py-15 gap-4">
+        <div className="flex items-center gap-4">
           <h2 className="text-[#F9B71E] font-bold text-2xl">
             Registration Approval
           </h2>
@@ -238,8 +265,8 @@ function AdminRegistrationApproval() {
       </header>
 
       <div className="rounded-xl bg-[#252525] p-8">
-        <div className="flex justify-between items-center mb-10">
-          <h4 className="text-white text-xl font-bold mb-8">Login Activity</h4>
+        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-10 gap-3">
+          <h4 className="text-white text-xl font-bold lg:mb-8">Accounts</h4>
 
           <div className="flex items-center gap-3">
             <label className="text-sm text-gray-300">Sort by</label>
@@ -283,33 +310,35 @@ function AdminRegistrationApproval() {
           <div className="col-span-4">Created At</div>
         </div>
 
-        <div className="space-y-2">
-          {sortedUsers.map((user) => (
-            <div
-              key={user.userID}
-              role="button"
-              tabIndex={0}
-              onClick={() => openUser(user)}
-              onKeyDown={(e) => e.key === "Enter" && openUser(user)}
-              className="grid grid-cols-12 items-center rounded-lg border border-[#ffffff49] text-sm bg-[#1F1F1F] cursor-pointer hover:shadow-lg hover:bg-gray-800"
-            >
-              <div className="col-span-1 p-4 border-r border-[#ffffff49] bg-[#323232] text-neutral-300 font-medium whitespace-nowrap rounded-bl-lg rounded-tl-lg ">
-                {user.userID}
-              </div>
+        <div className="space-y-2 overflow-x-scroll lg:overflow-hidden">
+          <div className="space-y-2 w-max lg:w-full">
+            {sortedUsers.map((user) => (
+              <div
+                key={user.userID}
+                role="button"
+                tabIndex={0}
+                onClick={() => openUser(user)}
+                onKeyDown={(e) => e.key === "Enter" && openUser(user)}
+                className="grid grid-cols-12 items-center rounded-lg border border-[#ffffff49] text-sm bg-[#1F1F1F] cursor-pointer hover:shadow-lg hover:bg-gray-800"
+              >
+                <div className="col-span-1 p-4 border-r border-[#ffffff49] bg-[#323232] text-neutral-300 font-medium whitespace-nowrap rounded-bl-lg rounded-tl-lg ">
+                  {user.userID}
+                </div>
 
-              <div className="col-span-4 p-4 border-neutral-700/50 text-neutral-300">
-                {user.email}
-              </div>
+                <div className="col-span-4 p-4 border-neutral-700/50 text-neutral-300">
+                  {user.email}
+                </div>
 
-              <div className="col-span-3 text-gray-300 text-sm">
-                {getCountryName(user.countryResidenceCode)}
-              </div>
+                <div className="col-span-3 text-gray-300 text-sm">
+                  {getCountryName(user.countryResidenceCode)}
+                </div>
 
-              <div className="col-span-4 text-gray-300 text-[12px]">
-                {fmt(user.createdAt)}
+                <div className="col-span-4 text-gray-300 text-[12px]">
+                  {fmt(user.createdAt)}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
@@ -388,23 +417,74 @@ function AdminRegistrationApproval() {
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={closeModal}
-                className="bg-[#2a2a2a] px-4 py-2 rounded text-gray-300"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => approveUser(selectedUser.userID)}
-                className="bg-gradient-to-r from-[#4183E8] to-[#284CC4] text-white px-4 py-2 rounded font-semibold"
-              >
-                Approve User
-              </button>
+            <div className="flex justify-between gap-3 mt-6">
+              <div>
+                <button
+                  onClick={() =>
+                    requestDisapproveUser(
+                      selectedUser.userID,
+                      selectedUser.email,
+                    )
+                  }
+                  className="px-4 py-2 bg-transparent border border-gray-700 text-red-400 rounded hover:bg-[#2a2a2a]"
+                >
+                  Disapprove
+                </button>
+              </div>
+
+              <div className=" flex gap-3">
+                <button
+                  onClick={closeModal}
+                  className="bg-[#2a2a2a] px-4 py-2 rounded text-gray-300"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  onClick={() =>
+                    requestApproveUser(selectedUser.userID, selectedUser.email)
+                  }
+                  className="bg-gradient-to-r from-[#4183E8] to-[#284CC4] text-white px-4 py-2 rounded font-semibold"
+                >
+                  Approve User
+                </button>
+              </div>
             </div>
           </div>
         </OverlayModal>
       )}
+      <ConfirmDialog
+        isOpen={confirmOpen}
+        title={
+          confirmPayload?.type === "disapprove"
+            ? "Disapprove User"
+            : confirmPayload?.type === "approve"
+              ? "Approve User"
+              : "Confirm"
+        }
+        message={
+          confirmPayload?.type === "disapprove"
+            ? `Disapprove account ${confirmPayload.email}?`
+            : confirmPayload?.type === "approve"
+              ? `Approve account ${confirmPayload.email}?`
+              : ""
+        }
+        confirmLabel={
+          confirmPayload?.type === "disapprove" ? "Disapprove" : "Approve"
+        }
+        danger={confirmPayload?.type === "disapprove"}
+        onConfirm={() => {
+          if (confirmPayload?.type === "disapprove") {
+            disapproveUser(confirmPayload.userID);
+          } else if (confirmPayload?.type === "approve") {
+            approveUser(confirmPayload.userID);
+          }
+        }}
+        onCancel={() => {
+          setConfirmOpen(false);
+          setConfirmPayload(null);
+        }}
+      />
     </div>
   );
 }
