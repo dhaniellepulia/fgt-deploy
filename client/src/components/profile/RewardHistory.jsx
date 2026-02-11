@@ -1,6 +1,7 @@
 //page for Profile > My Game Library
 
 import React from "react";
+import coin from "../../assets/coin.svg";
 
 // Mock data for reward history
 const rewardHistoryData = [
@@ -70,11 +71,7 @@ function RewardHistory() {
 
             <div className="flex items-center justify-end gap-2 p-3">
               <span>
-                <img
-                  src="../src/assets/coin.svg"
-                  alt="Coin"
-                  className="w-4 h-4"
-                />
+                <img src={coin} alt="Coin" className="w-4 h-4" />
               </span>
               <span>{item.coins}</span>
             </div>

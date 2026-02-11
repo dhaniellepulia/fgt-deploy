@@ -1,6 +1,7 @@
 import { NavLink } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "../../auth/AuthContext";
+import logo from "../../assets/logo PNE.png";
 
 import {
   Users,
@@ -37,7 +38,7 @@ function AdminSidebar() {
   return (
     <>
       <div className="lg:hidden flex items-center justify-between bg-[#4152B3] text-white px-5 py-4">
-        <img src="../src/assets/logo PNE.png" alt="logo" className="h-8" />
+        <img src={logo} alt="logo" className="h-8" />
 
         <button onClick={() => setOpen(true)}>
           <Menu size={28} />

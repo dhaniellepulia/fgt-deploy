@@ -1,6 +1,7 @@
 //page for Profile > Gamer Profile
 import React from "react";
 import StatCard from "../StatCard.jsx";
+import avatar from "../../assets/avatar.png";
 
 const stats = [
   { id: 1, label: "Coins", value: "5000" },
@@ -26,7 +27,7 @@ function GamerProfile() {
           </div>
 
           <img
-            src="../src/assets/avatar.png"
+            src={avatar}
             alt="avatar"
             className="w-30 h-30 rounded-full bg-cyan-400"
           />
