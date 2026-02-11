@@ -27,7 +27,9 @@ const SELF_REGISTER_USER_STATUS_ID = Number(
 );
 const ACTIVE_USER_STATUS_ID = Number(process.env.ACTIVE_USER_STATUS_ID || 1);
 
-app.use(cors());
+app.use(
+  cors({ origin: "https://fgt-deploy-client.vercel.app/", credentials: true }),
+);
 app.use(express.json());
 
 app.set("json replacer", (key, value) =>
