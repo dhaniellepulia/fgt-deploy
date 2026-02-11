@@ -18,9 +18,22 @@ function Login() {
     e.preventDefault();
 
     try {
-      await login({ email: username, password });
-      navigate("/dashboard");
+      const res = await login({ email: username, password });
+      if (res?.user && Number(res.user.roleID) === 1) {
+        navigate("/admin/accounts");
+      } else {
+        navigate("/dashboard");
+      }
     } catch (err) {
+      const msg = err?.message;
+      if (msg === "Account pending" || msg === "Account not active") {
+        navigate("/pending");
+        return;
+      }
+      if (msg === "Account disapproved") {
+        alert("Your account was disapproved. Contact support.");
+        return;
+      }
       alert("Login failed");
     }
   };

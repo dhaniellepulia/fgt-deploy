@@ -7,6 +7,10 @@ require("dotenv").config();
 const { requireAuth } = require("./middleware/auth");
 const { buildQuestionnaireRoutes } = require("./routes/questionnaires");
 const { buildProjectRoutes } = require("./routes/projects");
+const { buildAdminUserRoutes } = require("./routes/admin/adminUsers");
+const {
+  buildAdminQuestionnaireRoutes,
+} = require("./routes/admin/adminQuestionnaires");
 
 const app = express();
 const prisma = new PrismaClient();
@@ -16,20 +20,25 @@ const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
 const DEFAULT_ROLE_ID = BigInt(process.env.DEFAULT_ROLE_ID || 2); // 2 = tester (seeded)
 const DEFAULT_USER_STATUS_ID = Number(process.env.DEFAULT_USER_STATUS_ID || 1); // 1 = Active (seeded)
 const DEFAULT_COMMUNITY_SETTING_ID = Number(
-  process.env.DEFAULT_COMMUNITY_SETTING_ID || 0
+  process.env.DEFAULT_COMMUNITY_SETTING_ID || 0,
 );
+const SELF_REGISTER_USER_STATUS_ID = Number(
+  process.env.SELF_REGISTER_USER_STATUS_ID || 4,
+);
+const ACTIVE_USER_STATUS_ID = Number(process.env.ACTIVE_USER_STATUS_ID || 1);
 
 app.use(cors());
 app.use(express.json());
+
 app.set("json replacer", (key, value) =>
-  typeof value === "bigint" ? value.toString() : value
+  typeof value === "bigint" ? value.toString() : value,
 );
 
 function signToken(user) {
   return jwt.sign(
     { sub: user.userID.toString(), roleID: user.roleID.toString() },
     JWT_SECRET,
-    { expiresIn: "7d" }
+    { expiresIn: "7d" },
   );
 }
 
@@ -51,13 +60,14 @@ app.post("/auth/register", async (req, res) => {
       email,
       passwordHash,
       roleID: roleID ? BigInt(roleID) : DEFAULT_ROLE_ID,
-      userStatusID: DEFAULT_USER_STATUS_ID,
+      userStatusID: SELF_REGISTER_USER_STATUS_ID,
       communitySettingID: DEFAULT_COMMUNITY_SETTING_ID,
     },
     select: {
       userID: true,
       email: true,
       roleID: true,
+      userStatusID: true,
       communitySettingID: true,
       onboardingProfileCompleted: true,
       onboardingQuestionnaireCompleted: true,
@@ -76,9 +86,13 @@ app.post("/auth/register", async (req, res) => {
       recentGameID: true,
     },
   });
-
-  const token = signToken(user);
-  res.json({ token, user });
+  //added code:
+  // only issue a token if the account is active
+  if (Number(user.userStatusID) === ACTIVE_USER_STATUS_ID) {
+    const token = signToken(user);
+    return res.status(201).json({ token, user });
+  }
+  return res.status(201).json({ user, pending: true });
 });
 
 app.post("/auth/login", async (req, res) => {
@@ -87,7 +101,26 @@ app.post("/auth/login", async (req, res) => {
     return res.status(400).json({ error: "Email and password required" });
   }
 
-  const user = await prisma.user.findUnique({ where: { email } });
+  // const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findFirst({
+    where: { email, deletedAt: null },
+  });
+
+  if (Number(user.userStatusID) === SELF_REGISTER_USER_STATUS_ID) {
+    return res
+      .status(403)
+      .json({ error: "Account pending", userStatusID: user.userStatusID });
+  }
+  if (Number(user.userStatusID) === 3) {
+    return res
+      .status(403)
+      .json({ error: "Account disapproved", userStatusID: user.userStatusID });
+  }
+  if (Number(user.userStatusID) !== ACTIVE_USER_STATUS_ID) {
+    return res
+      .status(403)
+      .json({ error: "Account not active", userStatusID: user.userStatusID });
+  }
   if (!user) return res.status(401).json({ error: "Invalid credentials" });
 
   const ok = await bcrypt.compare(password, user.passwordHash);
@@ -325,6 +358,8 @@ app.patch("/users/me/profile", async (req, res, next) => {
 });
 app.use(buildQuestionnaireRoutes(prisma));
 app.use(buildProjectRoutes(prisma));
+app.use(buildAdminUserRoutes(prisma));
+app.use(buildAdminQuestionnaireRoutes(prisma));
 
 app.use((err, req, res, next) => {
   // eslint-disable-next-line no-console

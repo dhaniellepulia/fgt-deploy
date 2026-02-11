@@ -33,10 +33,7 @@ export default function ProtectedRoute({ children }) {
     return <Navigate to="/" replace />;
   }
 
-  // allow admin by email to bypass onboarding (for dev only)
-  const isAdmin =
-    typeof user.email === "string" &&
-    user.email.toLowerCase() === "admin@gmail.com";
+  const isAdmin = user.roleID && Number(user.roleID) === 1;
   if (isAdmin) return children;
 
   const roleID = user.roleID?.toString();

@@ -51,72 +51,84 @@ function buildQuestionnaireRoutes(prisma) {
     }
   });
 
-  router.post(
-    "/questionnaires",
-    requireRole(1, 3),
-    async (req, res, next) => {
-      try {
-        const {
+  router.post("/questionnaires", requireRole(1, 3), async (req, res, next) => {
+    try {
+      const {
+        title,
+        description,
+        statusID,
+        startsAt,
+        endsAt,
+        timeLimitSeconds,
+        maxResponses,
+        pointsReward,
+        projectID,
+      } = req.body;
+
+      if (!title || !statusID) {
+        return res.status(400).json({ error: "title and statusID required" });
+      }
+
+      const clientUserID = BigInt(req.user.sub);
+
+      // if (projectID) {
+      //   const project = await prisma.project.findUnique({
+      //     where: { projectID: BigInt(projectID) },
+      //     select: { projectID: true, clientUserID: true },
+      //   });
+      //   if (!project) {
+      //     return res.status(404).json({ error: "Project not found" });
+      //   }
+      //   if (project.clientUserID !== clientUserID) {
+      //     return res.status(403).json({ error: "Forbidden" });
+      //   }
+      // }
+
+      //added to allow admin to create questionnaires
+      const isAdmin = req.user?.roleID?.toString() === "1";
+
+      if (projectID) {
+        const project = await prisma.project.findUnique({
+          where: { projectID: BigInt(projectID) },
+          select: { projectID: true, clientUserID: true },
+        });
+        if (!project) {
+          return res.status(404).json({ error: "Project not found" });
+        }
+        if (!isAdmin && project.clientUserID !== clientUserID) {
+          return res.status(403).json({ error: "Forbidden" });
+        }
+      }
+
+      const created = await prisma.questionnaire.create({
+        data: {
           title,
           description,
-          statusID,
-          startsAt,
-          endsAt,
-          timeLimitSeconds,
-          maxResponses,
-          pointsReward,
-          projectID,
-        } = req.body;
+          statusID: Number(statusID),
+          startsAt: startsAt ? new Date(startsAt) : null,
+          endsAt: endsAt ? new Date(endsAt) : null,
+          timeLimitSeconds:
+            timeLimitSeconds === null || timeLimitSeconds === undefined
+              ? null
+              : Number(timeLimitSeconds),
+          maxResponses:
+            maxResponses === null || maxResponses === undefined
+              ? null
+              : Number(maxResponses),
+          pointsReward:
+            pointsReward === null || pointsReward === undefined
+              ? 0
+              : Number(pointsReward),
+          projectID: projectID ? BigInt(projectID) : null,
+          clientUserID,
+        },
+      });
 
-        if (!title || !statusID) {
-          return res.status(400).json({ error: "title and statusID required" });
-        }
-
-        const clientUserID = BigInt(req.user.sub);
-
-        if (projectID) {
-          const project = await prisma.project.findUnique({
-            where: { projectID: BigInt(projectID) },
-            select: { projectID: true, clientUserID: true },
-          });
-          if (!project) {
-            return res.status(404).json({ error: "Project not found" });
-          }
-          if (project.clientUserID !== clientUserID) {
-            return res.status(403).json({ error: "Forbidden" });
-          }
-        }
-
-        const created = await prisma.questionnaire.create({
-          data: {
-            title,
-            description,
-            statusID: Number(statusID),
-            startsAt: startsAt ? new Date(startsAt) : null,
-            endsAt: endsAt ? new Date(endsAt) : null,
-            timeLimitSeconds:
-              timeLimitSeconds === null || timeLimitSeconds === undefined
-                ? null
-                : Number(timeLimitSeconds),
-            maxResponses:
-              maxResponses === null || maxResponses === undefined
-                ? null
-                : Number(maxResponses),
-            pointsReward:
-              pointsReward === null || pointsReward === undefined
-                ? 0
-                : Number(pointsReward),
-            projectID: projectID ? BigInt(projectID) : null,
-            clientUserID,
-          },
-        });
-
-        return res.status(201).json({ item: created });
-      } catch (err) {
-        return next(err);
-      }
+      return res.status(201).json({ item: created });
+    } catch (err) {
+      return next(err);
     }
-  );
+  });
 
   router.patch(
     "/questionnaires/:id",
@@ -125,6 +137,8 @@ function buildQuestionnaireRoutes(prisma) {
       try {
         const questionnaireID = BigInt(req.params.id);
         const clientUserID = BigInt(req.user.sub);
+
+        const isAdmin = req.user?.roleID?.toString() === "1";
 
         const existing = await prisma.questionnaire.findUnique({
           where: { questionnaireID },
@@ -135,7 +149,7 @@ function buildQuestionnaireRoutes(prisma) {
           return res.status(404).json({ error: "Not found" });
         }
 
-        if (existing.clientUserID !== clientUserID) {
+        if (!isAdmin && existing.clientUserID !== clientUserID) {
           return res.status(403).json({ error: "Forbidden" });
         }
 
@@ -159,7 +173,7 @@ function buildQuestionnaireRoutes(prisma) {
           if (!project) {
             return res.status(404).json({ error: "Project not found" });
           }
-          if (project.clientUserID !== clientUserID) {
+          if (!isAdmin && project.clientUserID !== clientUserID) {
             return res.status(403).json({ error: "Forbidden" });
           }
         }
@@ -171,9 +185,17 @@ function buildQuestionnaireRoutes(prisma) {
             description,
             statusID: statusID !== undefined ? Number(statusID) : undefined,
             startsAt:
-              startsAt === undefined ? undefined : startsAt ? new Date(startsAt) : null,
+              startsAt === undefined
+                ? undefined
+                : startsAt
+                  ? new Date(startsAt)
+                  : null,
             endsAt:
-              endsAt === undefined ? undefined : endsAt ? new Date(endsAt) : null,
+              endsAt === undefined
+                ? undefined
+                : endsAt
+                  ? new Date(endsAt)
+                  : null,
             timeLimitSeconds:
               timeLimitSeconds === undefined
                 ? undefined
@@ -205,7 +227,7 @@ function buildQuestionnaireRoutes(prisma) {
       } catch (err) {
         return next(err);
       }
-    }
+    },
   );
 
   router.delete(
@@ -225,7 +247,8 @@ function buildQuestionnaireRoutes(prisma) {
           return res.status(404).json({ error: "Not found" });
         }
 
-        if (existing.clientUserID !== clientUserID) {
+        const isAdmin = req.user?.roleID?.toString() === "1";
+        if (!isAdmin && existing.clientUserID !== clientUserID) {
           return res.status(403).json({ error: "Forbidden" });
         }
 
@@ -238,7 +261,7 @@ function buildQuestionnaireRoutes(prisma) {
       } catch (err) {
         return next(err);
       }
-    }
+    },
   );
 
   router.put(
@@ -259,7 +282,8 @@ function buildQuestionnaireRoutes(prisma) {
           return res.status(404).json({ error: "Not found" });
         }
 
-        if (questionnaire.clientUserID !== clientUserID) {
+        const isAdmin = req.user?.roleID?.toString() === "1";
+        if (!isAdmin && questionnaire.clientUserID !== clientUserID) {
           return res.status(403).json({ error: "Forbidden" });
         }
 
@@ -287,7 +311,7 @@ function buildQuestionnaireRoutes(prisma) {
       } catch (err) {
         return next(err);
       }
-    }
+    },
   );
 
   router.post(
@@ -320,7 +344,8 @@ function buildQuestionnaireRoutes(prisma) {
           return res.status(404).json({ error: "Not found" });
         }
 
-        if (questionnaire.clientUserID !== clientUserID) {
+        const isAdmin = req.user?.roleID?.toString() === "1";
+        if (!isAdmin && questionnaire.clientUserID !== clientUserID) {
           return res.status(403).json({ error: "Forbidden" });
         }
 
@@ -360,97 +385,89 @@ function buildQuestionnaireRoutes(prisma) {
       } catch (err) {
         return next(err);
       }
-    }
+    },
   );
 
-  router.patch(
-    "/questions/:id",
-    requireRole(1, 3),
-    async (req, res, next) => {
-      try {
-        const questionID = BigInt(req.params.id);
-        const {
-          questionTypeID,
+  router.patch("/questions/:id", requireRole(1, 3), async (req, res, next) => {
+    try {
+      const questionID = BigInt(req.params.id);
+      const {
+        questionTypeID,
+        questionText,
+        helpText,
+        isRequired,
+        displayOrder,
+        minSelections,
+        maxSelections,
+        minValue,
+        maxValue,
+        stepValue,
+        placeholderText,
+      } = req.body;
+
+      const updated = await prisma.question.update({
+        where: { questionID },
+        data: {
+          questionTypeID:
+            questionTypeID === undefined ? undefined : Number(questionTypeID),
           questionText,
           helpText,
-          isRequired,
-          displayOrder,
-          minSelections,
-          maxSelections,
-          minValue,
-          maxValue,
-          stepValue,
+          isRequired:
+            isRequired === undefined ? undefined : Boolean(isRequired),
+          displayOrder:
+            displayOrder === undefined ? undefined : Number(displayOrder),
+          minSelections:
+            minSelections === undefined
+              ? undefined
+              : minSelections === null
+                ? null
+                : Number(minSelections),
+          maxSelections:
+            maxSelections === undefined
+              ? undefined
+              : maxSelections === null
+                ? null
+                : Number(maxSelections),
+          minValue:
+            minValue === undefined
+              ? undefined
+              : minValue === null
+                ? null
+                : Number(minValue),
+          maxValue:
+            maxValue === undefined
+              ? undefined
+              : maxValue === null
+                ? null
+                : Number(maxValue),
+          stepValue:
+            stepValue === undefined
+              ? undefined
+              : stepValue === null
+                ? null
+                : Number(stepValue),
           placeholderText,
-        } = req.body;
+        },
+      });
 
-        const updated = await prisma.question.update({
-          where: { questionID },
-          data: {
-            questionTypeID:
-              questionTypeID === undefined ? undefined : Number(questionTypeID),
-            questionText,
-            helpText,
-            isRequired:
-              isRequired === undefined ? undefined : Boolean(isRequired),
-            displayOrder:
-              displayOrder === undefined ? undefined : Number(displayOrder),
-            minSelections:
-              minSelections === undefined
-                ? undefined
-                : minSelections === null
-                  ? null
-                  : Number(minSelections),
-            maxSelections:
-              maxSelections === undefined
-                ? undefined
-                : maxSelections === null
-                  ? null
-                  : Number(maxSelections),
-            minValue:
-              minValue === undefined
-                ? undefined
-                : minValue === null
-                  ? null
-                  : Number(minValue),
-            maxValue:
-              maxValue === undefined
-                ? undefined
-                : maxValue === null
-                  ? null
-                  : Number(maxValue),
-            stepValue:
-              stepValue === undefined
-                ? undefined
-                : stepValue === null
-                  ? null
-                  : Number(stepValue),
-            placeholderText,
-          },
-        });
-
-        return res.json({ item: updated });
-      } catch (err) {
-        return next(err);
-      }
+      return res.json({ item: updated });
+    } catch (err) {
+      return next(err);
     }
-  );
+  });
 
-  router.delete(
-    "/questions/:id",
-    requireRole(1, 3),
-    async (req, res, next) => {
-      try {
-        const questionID = BigInt(req.params.id);
-        const deleted = await prisma.question.update({
-          where: { questionID },
-          data: { deletedAt: new Date() },
-        });
-        return res.json({ item: deleted });
-      } catch (err) {
-        return next(err);
-      }
+  router.delete("/questions/:id", requireRole(1, 3), async (req, res, next) => {
+    try {
+      const questionID = BigInt(req.params.id);
+      const deleted = await prisma.question.update({
+        where: { questionID },
+        data: { deletedAt: new Date() },
+      });
+      return res.json({ item: deleted });
+    } catch (err) {
+      return next(err);
     }
-  );
+  });
 
   router.post(
     "/questions/:id/options",
@@ -458,7 +475,8 @@ function buildQuestionnaireRoutes(prisma) {
     async (req, res, next) => {
       try {
         const questionID = BigInt(req.params.id);
-        const { optionText, optionValue, displayOrder, isOtherOption } = req.body;
+        const { optionText, optionValue, displayOrder, isOtherOption } =
+          req.body;
 
         const created = await prisma.questionOption.create({
           data: {
@@ -474,7 +492,7 @@ function buildQuestionnaireRoutes(prisma) {
       } catch (err) {
         return next(err);
       }
-    }
+    },
   );
 
   router.patch(
@@ -483,7 +501,8 @@ function buildQuestionnaireRoutes(prisma) {
     async (req, res, next) => {
       try {
         const questionOptionID = BigInt(req.params.id);
-        const { optionText, optionValue, displayOrder, isOtherOption } = req.body;
+        const { optionText, optionValue, displayOrder, isOtherOption } =
+          req.body;
 
         const updated = await prisma.questionOption.update({
           where: { questionOptionID },
@@ -501,7 +520,7 @@ function buildQuestionnaireRoutes(prisma) {
       } catch (err) {
         return next(err);
       }
-    }
+    },
   );
 
   router.delete(
@@ -518,7 +537,7 @@ function buildQuestionnaireRoutes(prisma) {
       } catch (err) {
         return next(err);
       }
-    }
+    },
   );
 
   return router;

@@ -19,8 +19,13 @@ function Register() {
     e.preventDefault();
 
     try {
-      await register({ email, password, roleID });
-      navigate("/dashboard");
+      const res = await register({ email, password, roleID });
+      console.log("register response:", res);
+      if (res?.pending) {
+        navigate("/pending");
+      } else {
+        navigate("/dashboard");
+      }
     } catch (err) {
       alert(err.message || "Registration failed");
     }

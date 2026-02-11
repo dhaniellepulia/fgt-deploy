@@ -1,101 +1,25 @@
-﻿//Changes get saved only in state
-import React, { useMemo, useState } from "react";
+﻿import React, { useMemo, useState, useEffect } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import TopBar from "../components/layouts/TopBar";
 import OverlayModal from "../components/OverlayModal";
 import ConfirmDialog from "../components/ConfirmDialog";
-
-const initialProjects = [
-  {
-    projectID: 101,
-    title: "Sample 1",
-    clientName: "Sample Client",
-    status: "Pending",
-    createdAt: new Date("2026-01-05T10:00:00Z"),
-    genres: ["Racing", "Sci-fi"],
-    description: "Sample Description",
-    criteria: ["Age 18+", "Plays racing games", "PC players"],
-    gameTitle: "Space Racer",
-    gameGenre: "Racing",
-    gamePlatforms: ["PC"],
-    gameVersion: "0.9.1",
-    gameNotes: "Sample Notes",
-    image: null,
-    questionnaires: [
-      {
-        questionnaireID: 201,
-        title: "Sample Question",
-        description: "Sample question description",
-        statusID: 2,
-        publishedAt: null,
-        startsAt: new Date("2026-02-10T00:00:00Z"),
-        endsAt: new Date("2026-02-24T00:00:00Z"),
-        timeLimitSeconds: 600,
-        maxResponses: 500,
-        pointsReward: 50,
-        createdAt: new Date("2026-01-10T08:00:00Z"),
-        questions: [
-          {
-            id: "q1",
-            text: "How did you find the handling?",
-            type: "single",
-            points: 10,
-            options: ["Too floaty", "Just right", "Too tight"],
-          },
-        ],
-      },
-    ],
-  },
-  {
-    projectID: 102,
-    title: "Sample Game 2",
-    clientName: "Sample Client 2",
-    status: "Active",
-    createdAt: new Date("2025-12-12T14:30:00Z"),
-    genres: ["RPG", "Adventure"],
-    description: "Sample Description 2",
-    criteria: ["Age 16+", "Likes RPGs", "Comfortable writing feedback"],
-    gameTitle: "Mystic Quest",
-    gameGenre: "RPG",
-    gamePlatforms: ["PC", "Console"],
-    gameVersion: "1.2.0",
-    gameNotes: "Sample Notes 2",
-    image: null,
-    questionnaires: [
-      {
-        questionnaireID: 202,
-        title: "Sample",
-        description: "Sample",
-        statusID: 2,
-        publishedAt: new Date("2025-12-20T00:00:00Z"),
-        startsAt: new Date("2025-12-20T00:00:00Z"),
-        endsAt: new Date("2026-01-20T00:00:00Z"),
-        timeLimitSeconds: 900,
-        maxResponses: 300,
-        pointsReward: 40,
-        createdAt: new Date("2025-12-12T14:30:00Z"),
-        questions: [],
-      },
-    ],
-  },
-  {
-    projectID: 103,
-    title: "Sample Game 3",
-    clientName: "Sample Client 3",
-    status: "Pending",
-    createdAt: new Date("2026-01-20T09:15:00Z"),
-    genres: ["Puzzle", "Casual"],
-    description: "Sample Desciption",
-    criteria: ["All ages", "Casual players", "Mobile players"],
-    gameTitle: "Puzzle Garden",
-    gameGenre: "Puzzle",
-    gamePlatforms: ["Mobile"],
-    gameVersion: "0.5.0",
-    gameNotes: "",
-    image: null,
-    questionnaires: [],
-  },
-];
+import { useAuth } from "../auth/AuthContext";
+import { request, authHeaders } from "../api/http";
+import {
+  fetchClientProjects,
+  fetchClientProjectById,
+  createClientProject,
+  updateClientProject,
+  deleteClientProject,
+} from "../api/clientProjects";
+import {
+  createQuestionnaire,
+  updateQuestionnaire,
+  addQuestion,
+  addQuestionOption,
+  fetchQuestionnaire,
+} from "../api/questionnaires";
+import QuestionnaireBuilder from "../components/QuestionnaireBuilder";
 
 const fmt = (v) => {
   if (!v) return "";
@@ -103,8 +27,23 @@ const fmt = (v) => {
   return isNaN(d.getTime()) ? String(v) : d.toLocaleString();
 };
 
+const mapQType = (t) => {
+  if (typeof t === "number") return Number(t);
+  switch ((t || "").toString().toLowerCase()) {
+    case "single":
+      return 3;
+    case "multiple":
+      return 4;
+    case "text":
+      return 1;
+    default:
+      return 1;
+  }
+};
+
 export default function AdminProjectManagement() {
-  const [projects, setProjects] = useState(initialProjects);
+  const { token } = useAuth();
+  const [projects, setProjects] = useState([]);
   const [sortBy, setSortBy] = useState("projectID");
   const [direction, setDirection] = useState("asc");
   const [selectedProject, setSelectedProject] = useState(null);
@@ -119,7 +58,6 @@ export default function AdminProjectManagement() {
   const [newGamePlatforms, setNewGamePlatforms] = useState("");
   const [newGameVersion, setNewGameVersion] = useState("");
   const [newGameNotes, setNewGameNotes] = useState("");
-  const [newImage, setNewImage] = useState("");
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmPayload, setConfirmPayload] = useState(null);
@@ -135,30 +73,67 @@ export default function AdminProjectManagement() {
   const [qQuestions, setQQuestions] = useState([]);
   const [editingQuestionnaire, setEditingQuestionnaire] = useState(false);
   const [editingQuestionnaireId, setEditingQuestionnaireId] = useState(null);
+  const [builderInitialQuestionnaire, setBuilderInitialQuestionnaire] =
+    useState(null);
+  const [clients, setClients] = useState([]);
+  const [newProjectClientId, setNewProjectClientId] = useState("");
 
-  const handleNewImageFile = (e) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    const reader = new FileReader();
-    reader.onload = () => setNewImage(reader.result);
-    reader.readAsDataURL(f);
-  };
+  useEffect(() => {
+    if (!token) return;
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await fetchClientProjects(token);
+        let list = [];
+        if (Array.isArray(res)) list = res;
+        else if (Array.isArray(res?.projects)) list = res.projects;
+        else if (Array.isArray(res?.items)) list = res.items;
+        else if (Array.isArray(res?.data)) list = res.data;
+        else list = [];
+        if (mounted) setProjects(list);
+      } catch (err) {
+        console.error("Failed to load projects", err);
+        const m = String(err?.message || "");
+        if (m.includes("403") || /forbidden/i.test(m)) {
+          alert("Permission denied: you do not have access to projects (403).");
+        } else {
+          alert("Failed to load projects. See console for details.");
+        }
+        if (mounted) setProjects([]);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [token]);
 
-  const handleEditImageFile = (e) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    const reader = new FileReader();
-    reader.onload = () =>
-      setEditProject((p) => ({ ...(p || {}), image: reader.result }));
-    reader.readAsDataURL(f);
-  };
+  useEffect(() => {
+    if (!token) return;
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await request("/admin/users?role=client", {
+          headers: authHeaders(token),
+        });
+        const list = res?.items || res?.users || res || [];
+        if (mounted) setClients(list);
+      } catch (err) {
+        console.warn("Failed to load clients", err);
+        if (mounted) setClients([]);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [token]);
 
   const sorted = useMemo(() => {
-    const arr = [...projects];
+    const arr = Array.isArray(projects) ? [...projects] : [];
     const cmp = (a, b) => {
       if (sortBy === "projectID")
         return Number(a.projectID) - Number(b.projectID);
-      if (sortBy === "client") return a.clientName.localeCompare(b.clientName);
+      if (sortBy === "client")
+        return (a.clientName || "").localeCompare(b.clientName || "");
       if (sortBy === "createdAt") {
         const da = (
           a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt)
@@ -174,16 +149,45 @@ export default function AdminProjectManagement() {
     return arr;
   }, [projects, sortBy, direction]);
 
-  const openProject = (p) => {
+  const openProject = async (p) => {
     setSelectedProject(p);
     setEditProject({ ...p });
 
-    const existing = p.questionnaires?.[0] ?? null;
-    if (existing) {
-      setEditingQuestionnaire(false);
-      setEditingQuestionnaireId(existing.questionnaireID);
+    if (token && p?.projectID) {
+      try {
+        const res = await fetchClientProjectById(p.projectID, token);
+        const project = res?.item || res?.project || res || p;
+        if (Array.isArray(project.gamePlatforms)) {
+          project.gamePlatforms = project.gamePlatforms.join(", ");
+        } else if (
+          project.gamePlatforms === null ||
+          project.gamePlatforms === undefined
+        ) {
+          project.gamePlatforms = "";
+        } else {
+          project.gamePlatforms = String(project.gamePlatforms);
+        }
+        setSelectedProject(project);
+        setEditProject({ ...project });
+        const existing = project.questionnaires?.[0] ?? null;
+        if (existing) {
+          setEditingQuestionnaire(false);
+          setEditingQuestionnaireId(existing.questionnaireID);
+        } else {
+          setEditingQuestionnaireId(null);
+        }
+      } catch (err) {
+        console.error("Failed to load project", err);
+        alert("Failed to load project details.");
+      }
     } else {
-      setEditingQuestionnaireId(null);
+      const existing = p.questionnaires?.[0] ?? null;
+      if (existing) {
+        setEditingQuestionnaire(false);
+        setEditingQuestionnaireId(existing.questionnaireID);
+      } else {
+        setEditingQuestionnaireId(null);
+      }
     }
   };
 
@@ -205,53 +209,120 @@ export default function AdminProjectManagement() {
     setNewGamePlatforms("");
     setNewGameVersion("");
     setNewGameNotes("");
-    setNewImage("");
     setShowAddProject(true);
   };
 
-  const createProject = () => {
-    const nextID = Math.max(...projects.map((p) => p.projectID), 100) + 1;
-    const newP = {
-      projectID: nextID,
-      title: newProjectTitle || `Untitled ${nextID}`,
-      clientName: newProjectClient || "Unknown",
-      status: "Pending",
-      createdAt: new Date(),
-      image: newImage || "",
-      genres: newGameGenre ? [newGameGenre] : [],
+  const createProject = async () => {
+    const platformsString = newGamePlatforms
+      ? newGamePlatforms
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .join(", ")
+      : "";
+
+    const payload = {
+      title: newProjectTitle || `Untitled`,
       description: newProjectDescription || "",
-      criteria: [],
       gameTitle: newGameTitle || "",
       gameGenre: newGameGenre || "",
-      gamePlatforms: newGamePlatforms
-        ? newGamePlatforms
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean)
-        : [],
+      gamePlatforms: platformsString || null,
       gameVersion: newGameVersion || "",
       gameNotes: newGameNotes || "",
-      questionnaires: [],
+      clientUserID: newProjectClientId || undefined,
     };
-    setProjects((prev) => [newP, ...prev]);
-    setShowAddProject(false);
+
+    try {
+      if (!token) throw new Error("Not authenticated");
+      const res = await createClientProject(token, payload);
+      const created = res?.item || res || null;
+      if (created) {
+        const clientId = created.clientUserID
+          ? String(created.clientUserID)
+          : newProjectClientId || "";
+        const clientObj = clients.find(
+          (c) => String(c.userID) === String(clientId),
+        );
+        created.clientName =
+          clientObj?.clientName ||
+          (clientObj
+            ? `${clientObj.firstName || ""} ${clientObj.lastName || ""}`.trim()
+            : created.clientName) ||
+          clientObj?.email ||
+          created.clientName ||
+          null;
+
+        setProjects((prev) =>
+          Array.isArray(prev) ? [created, ...prev] : [created],
+        );
+      }
+      setShowAddProject(false);
+    } catch (err) {
+      console.error("Create project failed", err);
+      alert(err.message || "Create project failed");
+    }
   };
 
-  const saveProject = () => {
+  const saveProject = async () => {
     if (!editProject) return;
-    setProjects((prev) =>
-      prev.map((p) =>
-        p.projectID === editProject.projectID ? { ...editProject } : p,
-      ),
-    );
-    setSelectedProject({ ...editProject });
-    setEditProject({ ...editProject });
-    closeModal();
+    try {
+      if (!token) throw new Error("Not authenticated");
+      const { projectID, ...body } = editProject;
+      const gp = Array.isArray(body.gamePlatforms)
+        ? body.gamePlatforms
+            .map((s) => String(s).trim())
+            .filter(Boolean)
+            .join(", ")
+        : (body.gamePlatforms ?? "");
+      const normalized = {
+        ...body,
+        gamePlatforms: gp === "" ? null : gp,
+        clientUserID:
+          body.clientUserID === undefined ? undefined : body.clientUserID,
+      };
+      const res = await updateClientProject(projectID, token, normalized);
+      const updated = res?.item || res || { projectID, ...normalized };
+
+      const clientId = updated.clientUserID ?? editProject.clientUserID ?? "";
+      const clientObj = clients.find(
+        (c) => String(c.userID) === String(clientId),
+      );
+      updated.clientName =
+        updated.clientName ||
+        clientObj?.clientName ||
+        (clientObj
+          ? `${clientObj.firstName || ""} ${clientObj.lastName || ""}`.trim()
+          : null) ||
+        clientObj?.email ||
+        updated.clientName;
+      setProjects((prev) =>
+        Array.isArray(prev)
+          ? prev.map((p) => (p.projectID === projectID ? updated : p))
+          : [updated],
+      );
+      setSelectedProject(updated);
+      setEditProject({ ...updated });
+      closeModal();
+    } catch (err) {
+      console.error("Save project failed", err);
+      alert(err.message || "Save project failed");
+    }
   };
 
-  const deleteProject = (projectID) => {
-    setProjects((prev) => prev.filter((p) => p.projectID !== projectID));
-    closeModal();
+  const deleteProject = async (projectID) => {
+    try {
+      if (!token) throw new Error("Not authenticated");
+      await deleteClientProject(projectID, token);
+      setProjects((prev) =>
+        Array.isArray(prev)
+          ? prev.filter((p) => p.projectID !== projectID)
+          : [],
+      );
+      closeModal();
+    } catch (err) {
+      console.error("Delete project failed", err);
+      alert(err.message || "Delete project failed");
+    }
   };
 
   const requestConfirm = (payload) => {
@@ -264,19 +335,9 @@ export default function AdminProjectManagement() {
     const { type, projectID } = confirmPayload;
 
     if (type === "deleteProject") {
-      setProjects((prev) => prev.filter((p) => p.projectID !== projectID));
-      closeModal();
+      deleteProject(projectID);
     } else if (type === "saveProject") {
-      if (editProject) {
-        setProjects((prev) =>
-          prev.map((p) =>
-            p.projectID === editProject.projectID ? { ...editProject } : p,
-          ),
-        );
-        setSelectedProject({ ...editProject });
-        setEditProject({ ...editProject });
-        closeModal();
-      }
+      saveProject();
     } else if (type === "saveQuestionnaire") {
       createOrUpdateQuestionnaire(projectID);
     } else if (type === "createProject") {
@@ -287,20 +348,31 @@ export default function AdminProjectManagement() {
     setConfirmPayload(null);
   };
 
-  const openAddQuestionnaire = () => {
+  const openAddQuestionnaire = async () => {
     const existing = selectedProject?.questionnaires?.[0] ?? null;
     if (existing) {
-      loadQuestionnaireToBuilder(existing);
       setEditingQuestionnaire(true);
       setEditingQuestionnaireId(existing.questionnaireID);
+      if (token) {
+        try {
+          const res = await fetchQuestionnaire(existing.questionnaireID, token);
+          const full = res?.item || res || existing;
+          setBuilderInitialQuestionnaire(full);
+        } catch (err) {
+          console.warn("Failed to load full questionnaire, falling back:", err);
+          setBuilderInitialQuestionnaire(existing);
+        }
+      } else {
+        setBuilderInitialQuestionnaire(existing);
+      }
     } else {
+      setBuilderInitialQuestionnaire(null);
       resetQuestionnaireBuilder();
       setEditingQuestionnaire(false);
       setEditingQuestionnaireId(null);
     }
     setShowAddQuestionnaire(true);
   };
-
   function resetQuestionnaireBuilder() {
     setQTitle("");
     setQDesc("");
@@ -379,13 +451,16 @@ export default function AdminProjectManagement() {
     );
   };
 
-  const createOrUpdateQuestionnaire = (projectID) => {
+  const createOrUpdateQuestionnaire = async (projectID) => {
     const qNextID =
       Math.max(
         0,
-        ...projects.flatMap(
-          (p) => p.questionnaires?.map((q) => Number(q.questionnaireID)) || [],
-        ),
+        ...(Array.isArray(projects)
+          ? projects.flatMap(
+              (p) =>
+                p.questionnaires?.map((q) => Number(q.questionnaireID)) || [],
+            )
+          : []),
       ) + 1;
 
     const preparedQuestions = qQuestions.map((q) => ({
@@ -402,31 +477,186 @@ export default function AdminProjectManagement() {
       description: qDesc || "",
       statusID: 1,
       publishedAt: null,
-      startsAt: qStartsAt ? new Date(qStartsAt) : null,
-      endsAt: qEndsAt ? new Date(qEndsAt) : null,
+      startsAt: qStartsAt ? new Date(qStartsAt).toISOString() : null,
+      endsAt: qEndsAt ? new Date(qEndsAt).toISOString() : null,
       timeLimitSeconds: qTimeLimit ? Number(qTimeLimit) : null,
       maxResponses: qMaxResponses ? Number(qMaxResponses) : null,
       pointsReward: Number(qPoints) || 0,
-      createdAt: new Date(),
+      createdAt: new Date().toISOString(),
       questions: preparedQuestions,
+      projectID,
     };
 
-    setProjects((prev) =>
-      prev.map((p) =>
-        p.projectID === projectID ? { ...p, questionnaires: [payload] } : p,
-      ),
-    );
+    try {
+      if (!token) throw new Error("Not authenticated");
 
-    if (editProject && editProject.projectID === projectID) {
-      setEditProject((ep) => ({ ...(ep || {}), questionnaires: [payload] }));
-      setSelectedProject((sp) => ({
-        ...(sp || {}),
-        questionnaires: [payload],
-      }));
+      let res;
+      if (editingQuestionnaireId) {
+        res = await updateQuestionnaire(editingQuestionnaireId, token, payload);
+      } else {
+        res = await createQuestionnaire(token, payload);
+      }
+
+      const qResRaw = res?.item || res?.questionnaire || res || payload;
+      console.log("questionnaire response:", qResRaw);
+
+      const normalizedQRes = {
+        ...qResRaw,
+        questionnaireID:
+          qResRaw.questionnaireID ?? qResRaw.id ?? payload.questionnaireID,
+        title: qResRaw.title ?? payload.title,
+        description: qResRaw.description ?? payload.description,
+        pointsReward:
+          qResRaw.pointsReward ?? qResRaw.points ?? payload.pointsReward,
+        timeLimitSeconds:
+          qResRaw.timeLimitSeconds ??
+          qResRaw.timeLimit ??
+          payload.timeLimitSeconds,
+        maxResponses: qResRaw.maxResponses ?? payload.maxResponses,
+        startsAt: qResRaw.startsAt ?? payload.startsAt,
+        endsAt: qResRaw.endsAt ?? payload.endsAt,
+        createdAt: qResRaw.createdAt ?? payload.createdAt,
+        questions: (Array.isArray(qResRaw.questions)
+          ? qResRaw.questions
+          : Array.isArray(qResRaw.items)
+            ? qResRaw.items
+            : payload.questions || []
+        ).map((qq, idx) => ({
+          id: qq.id ?? qq.questionID ?? `q_${Date.now()}_${idx}`,
+          text: qq.text ?? qq.questionText ?? qq.question ?? "",
+          type: qq.type ?? qq.questionType ?? "single",
+          points: Number(qq.points ?? qq.pointsReward ?? 0),
+          options: Array.isArray(qq.options)
+            ? qq.options
+            : Array.isArray(qq.choices)
+              ? qq.choices.map((c) =>
+                  typeof c === "string" ? c : c.text || "",
+                )
+              : [],
+        })),
+      };
+
+      if (
+        Array.isArray(preparedQuestions) &&
+        preparedQuestions.length > 0 &&
+        (!Array.isArray(qResRaw.questions) || qResRaw.questions.length === 0)
+      ) {
+        try {
+          const questionnaireId = normalizedQRes.questionnaireID;
+          let displayOrder = 1;
+          for (const pq of preparedQuestions) {
+            const qPayload = {
+              questionTypeID: mapQType(pq.type),
+              questionText: pq.text || "Untitled question",
+              helpText: null,
+              isRequired: false,
+              displayOrder,
+            };
+            displayOrder += 1;
+
+            const qCreateRes = await addQuestion(
+              questionnaireId,
+              token,
+              qPayload,
+            );
+            const createdQuestionId =
+              qCreateRes?.item?.questionID ||
+              qCreateRes?.questionID ||
+              qCreateRes?.id;
+            if (
+              createdQuestionId &&
+              Array.isArray(pq.options) &&
+              pq.options.length
+            ) {
+              let optionOrder = 1;
+              for (const optText of pq.options) {
+                await addQuestionOption(createdQuestionId, token, {
+                  optionText: String(optText || ""),
+                  displayOrder: optionOrder,
+                });
+                optionOrder += 1;
+              }
+            }
+          }
+        } catch (err) {
+          console.warn(
+            "Admin: failed to persist nested questions/options",
+            err,
+          );
+        }
+      }
+
+      try {
+        if (token) {
+          const prRes = await fetchClientProjectById(projectID, token);
+          const refreshedProject =
+            prRes?.item || prRes?.project || prRes || null;
+
+          if (refreshedProject) {
+            const normalizedProject = { ...refreshedProject };
+            if (Array.isArray(normalizedProject.gamePlatforms)) {
+              normalizedProject.gamePlatforms =
+                normalizedProject.gamePlatforms.join(", ");
+            } else {
+              normalizedProject.gamePlatforms = String(
+                normalizedProject.gamePlatforms ?? "",
+              );
+            }
+
+            setProjects((prev) =>
+              Array.isArray(prev)
+                ? prev.map((p) =>
+                    p.projectID === projectID ? normalizedProject : p,
+                  )
+                : [normalizedProject],
+            );
+            setEditProject(normalizedProject);
+            setSelectedProject(normalizedProject);
+            setShowAddQuestionnaire(false);
+            resetQuestionnaireBuilder();
+            return;
+          }
+        }
+      } catch (refreshErr) {
+        console.warn(
+          "Project refresh failed, falling back to local update",
+          refreshErr,
+        );
+      }
+
+      setProjects((prev) =>
+        Array.isArray(prev)
+          ? prev.map((p) =>
+              p.projectID === projectID
+                ? { ...p, questionnaires: [normalizedQRes] }
+                : p,
+            )
+          : [],
+      );
+
+      if (editProject && editProject.projectID === projectID) {
+        setEditProject((ep) => ({
+          ...(ep || {}),
+          questionnaires: [normalizedQRes],
+        }));
+        setSelectedProject((sp) => ({
+          ...(sp || {}),
+          questionnaires: [normalizedQRes],
+        }));
+      }
+
+      setShowAddQuestionnaire(false);
+      resetQuestionnaireBuilder();
+    } catch (err) {
+      console.error("Save questionnaire failed", err);
+      alert(err.message || "Save questionnaire failed");
     }
+  };
 
-    setShowAddQuestionnaire(false);
-    resetQuestionnaireBuilder();
+  const platformsDisplay = (gp) => {
+    if (!gp) return "";
+    if (Array.isArray(gp)) return gp.join(", ");
+    return String(gp);
   };
 
   return (
@@ -486,6 +716,7 @@ export default function AdminProjectManagement() {
             </button>
           </div>
         </div>
+
         <div className="grid grid-cols-12 px-4 mb-4 text-sm font-bold text-neutral-500 uppercase tracking-wide">
           <div className="col-span-1">ID</div>
           <div className="col-span-5 px-4">Title</div>
@@ -497,7 +728,7 @@ export default function AdminProjectManagement() {
           <div className="space-y-2 w-max lg:w-full">
             {sorted.map((p) => (
               <div
-                key={p.projectID}
+                key={String(p.projectID)}
                 role="button"
                 tabIndex={0}
                 onClick={() => openProject(p)}
@@ -541,11 +772,20 @@ export default function AdminProjectManagement() {
           </div>
           <div>
             <label className="text-xs text-neutral-400">Client</label>
-            <input
-              value={newProjectClient}
-              onChange={(e) => setNewProjectClient(e.target.value)}
+            <select
+              value={newProjectClientId}
+              onChange={(e) => setNewProjectClientId(e.target.value)}
               className="w-full mt-1 p-2 bg-[#1e1e1e] border border-gray-700 rounded text-gray-300"
-            />
+            >
+              <option value="">Select client</option>
+              {clients.map((c) => (
+                <option key={String(c.userID)} value={String(c.userID)}>
+                  {c.clientName ||
+                    `${c.firstName || ""} ${c.lastName || ""}`.trim() ||
+                    c.email}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="text-xs text-neutral-400">Description</label>
@@ -599,26 +839,6 @@ export default function AdminProjectManagement() {
                 className="w-full mt-1 p-2 bg-[#1e1e1e] border border-gray-700 rounded text-gray-300"
               />
             </div>
-            <div className="col-span-2">
-              <label className="text-xs text-neutral-400">Upload Image</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleNewImageFile}
-                className="w-full mt-1 text-sm text-gray-300 cursor-pointer"
-              />
-              {newImage ? (
-                <img
-                  src={newImage}
-                  alt="preview"
-                  className="mt-2 w-full h-32 object-cover rounded-md border border-gray-700"
-                />
-              ) : (
-                <div className="mt-2 w-full h-32 bg-gray-800 rounded-md flex items-center justify-center text-gray-500">
-                  No image
-                </div>
-              )}
-            </div>
           </div>
 
           <div className="flex justify-end gap-3 mt-4">
@@ -646,53 +866,7 @@ export default function AdminProjectManagement() {
         >
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="md:col-span-1">
-                {editProject.image ? (
-                  <img
-                    src={editProject.image}
-                    alt={editProject.title}
-                    className="w-full h-40 object-cover rounded-md border border-gray-700"
-                  />
-                ) : (
-                  <div className="w-full h-40 bg-gray-800 rounded-md flex items-center justify-center text-gray-500">
-                    No image
-                  </div>
-                )}
-                <div className="mt-3">
-                  <div className="flex items-start gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <label
-                          htmlFor="edit-image-input"
-                          className="inline-flex items-center px-3 py-2 bg-[#2a2a2a] hover:bg-[#333] text-sm rounded cursor-pointer border border-gray-700 text-gray-300"
-                        >
-                          Change
-                        </label>
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setEditProject((p) => ({ ...(p || {}), image: "" }))
-                          }
-                          className="px-3 py-2 bg-transparent border border-gray-700 text-sm rounded text-red-400 hover:bg-[#2a2a2a]"
-                        >
-                          Remove
-                        </button>
-                      </div>
-
-                      <input
-                        id="edit-image-input"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleEditImageFile}
-                        className="hidden"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="md:col-span-2 text-gray-300">
+              <div className="md:col-span-3 text-gray-300">
                 <div className="mb-2">
                   <label className="text-xs text-neutral-400">Title</label>
                   <input
@@ -706,16 +880,33 @@ export default function AdminProjectManagement() {
 
                 <div className="text-sm text-neutral-400 mb-3">
                   <label className="text-xs text-neutral-400">Client</label>
-                  <input
-                    value={editProject.clientName || ""}
-                    onChange={(e) =>
+                  <select
+                    value={String(editProject.clientUserID ?? "")}
+                    onChange={(e) => {
+                      const id = e.target.value || null;
+                      const clientObj = clients.find(
+                        (c) => String(c.userID) === id,
+                      );
                       setEditProject((p) => ({
-                        ...p,
-                        clientName: e.target.value,
-                      }))
-                    }
+                        ...(p || {}),
+                        clientUserID: id ? id : p.clientUserID,
+                        clientName: clientObj
+                          ? clientObj.clientName ||
+                            `${clientObj.firstName || ""} ${clientObj.lastName || ""}`.trim()
+                          : p.clientName,
+                      }));
+                    }}
                     className="w-full mt-1 p-2 bg-[#1e1e1e] border border-gray-700 rounded text-gray-300"
-                  />
+                  >
+                    <option value="">(Unassigned / Select client)</option>
+                    {clients.map((c) => (
+                      <option key={String(c.userID)} value={String(c.userID)}>
+                        {c.clientName ||
+                          `${c.firstName || ""} ${c.lastName || ""}`.trim() ||
+                          c.email}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="mb-4">
@@ -743,23 +934,9 @@ export default function AdminProjectManagement() {
                   </div>
 
                   <div>
-                    <div className="text-xs text-neutral-400">Status</div>
-                    <div className="font-semibold text-white">
-                      {editProject.status}
-                    </div>
-                  </div>
-
-                  <div>
                     <div className="text-xs text-neutral-400">Created</div>
                     <div className="font-semibold text-white">
                       {fmt(editProject.createdAt)}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-xs text-neutral-400">Criteria</div>
-                    <div className="font-semibold text-white">
-                      {(editProject.criteria || []).join(", ")}
                     </div>
                   </div>
 
@@ -799,14 +976,11 @@ export default function AdminProjectManagement() {
                     <div className="text-xs text-neutral-400">Platforms</div>
                     <div>
                       <input
-                        value={(editProject.gamePlatforms || []).join(", ")}
+                        value={platformsDisplay(editProject.gamePlatforms)}
                         onChange={(e) =>
                           setEditProject((p) => ({
-                            ...p,
-                            gamePlatforms: e.target.value
-                              .split(",")
-                              .map((s) => s.trim())
-                              .filter(Boolean),
+                            ...(p || {}),
+                            gamePlatforms: e.target.value,
                           }))
                         }
                         className="w-full mt-1 p-2 bg-[#1e1e1e] border border-gray-700 rounded text-gray-300"
@@ -876,7 +1050,7 @@ export default function AdminProjectManagement() {
                 )}
                 {(selectedProject.questionnaires || []).map((q) => (
                   <div
-                    key={q.questionnaireID}
+                    key={String(q.questionnaireID)}
                     className="p-3 bg-[#1b1b1b] rounded border border-[#ffffff22] text-gray-300"
                   >
                     <div className="flex justify-between items-start">
@@ -916,227 +1090,137 @@ export default function AdminProjectManagement() {
                     : "Add Questionnaire"
                 }
               >
-                <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-                  <div>
-                    <label className="text-xs text-neutral-400">Title</label>
-                    <input
-                      value={qTitle}
-                      onChange={(e) => setQTitle(e.target.value)}
-                      className="w-full mt-1 p-2 bg-[#1e1e1e] border border-gray-700 rounded text-gray-300"
-                    />
-                  </div>
+                <div className="p-4">
+                  <QuestionnaireBuilder
+                    token={token}
+                    projectID={editProject?.projectID}
+                    initialQuestionnaire={
+                      editingQuestionnaire
+                        ? builderInitialQuestionnaire ||
+                          selectedProject?.questionnaires?.[0] ||
+                          null
+                        : null
+                    }
+                    onSaved={async (fullQuestionnaire) => {
+                      try {
+                        if (token && editProject?.projectID) {
+                          const prRes = await fetchClientProjectById(
+                            editProject.projectID,
+                            token,
+                          );
+                          const refreshedProject =
+                            prRes?.item || prRes?.project || prRes || null;
+                          if (refreshedProject) {
+                            if (Array.isArray(refreshedProject.gamePlatforms)) {
+                              refreshedProject.gamePlatforms =
+                                refreshedProject.gamePlatforms.join(", ");
+                            } else {
+                              refreshedProject.gamePlatforms = String(
+                                refreshedProject.gamePlatforms ?? "",
+                              );
+                            }
 
-                  <div>
-                    <label className="text-xs text-neutral-400">
-                      Description
-                    </label>
-                    <textarea
-                      value={qDesc}
-                      onChange={(e) => setQDesc(e.target.value)}
-                      className="w-full mt-1 p-2 bg-[#1e1e1e] border border-gray-700 rounded text-gray-300"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <label className="text-xs text-neutral-400">
-                        Points Reward
-                      </label>
-                      <input
-                        type="number"
-                        value={qPoints}
-                        onChange={(e) => setQPoints(e.target.value)}
-                        className="w-full mt-1 p-2 bg-[#1e1e1e] border border-gray-700 rounded text-gray-300"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-neutral-400">
-                        Time Limit (s)
-                      </label>
-                      <input
-                        type="number"
-                        value={qTimeLimit}
-                        onChange={(e) => setQTimeLimit(e.target.value)}
-                        className="w-full mt-1 p-2 bg-[#1e1e1e] border border-gray-700 rounded text-gray-300"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-neutral-400">
-                        Max Responses
-                      </label>
-                      <input
-                        type="number"
-                        value={qMaxResponses}
-                        onChange={(e) => setQMaxResponses(e.target.value)}
-                        className="w-full mt-1 p-2 bg-[#1e1e1e] border border-gray-700 rounded text-gray-300"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs text-neutral-400">
-                        Starts At
-                      </label>
-                      <input
-                        type="datetime-local"
-                        value={qStartsAt}
-                        onChange={(e) => setQStartsAt(e.target.value)}
-                        className="w-full mt-1 p-2 bg-[#1e1e1e] border border-gray-700 rounded text-gray-300"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-neutral-400">
-                        Ends At
-                      </label>
-                      <input
-                        type="datetime-local"
-                        value={qEndsAt}
-                        onChange={(e) => setQEndsAt(e.target.value)}
-                        className="w-full mt-1 p-2 bg-[#1e1e1e] border border-gray-700 rounded text-gray-300"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="border-t border-[#ffffff10] p-5 bg-[#1b1b1b]">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="text-white font-semibold">Questions</div>
-                      <div>
-                        <button
-                          onClick={addQuestion}
-                          className="bg-[#2a2a2a] px-3 py-1 rounded text-sm text-gray-300"
-                        >
-                          Add Question
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      {qQuestions.map((qq, idx) => (
-                        <div
-                          key={qq.id}
-                          className="p-3 border border-[#ffffff14] rounded"
-                        >
-                          <div className="flex justify-between items-center mb-2">
-                            <div className="text-sm font-semibold text-white">
-                              Question {idx + 1}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => removeQuestion(qq.id)}
-                                className="text-xs text-red-400 bg-[#2a2a2a] px-2 py-1 rounded"
-                              >
-                                Remove
-                              </button>
-                            </div>
-                          </div>
-
-                          <div className="mb-2">
-                            <input
-                              placeholder="Question text"
-                              value={qq.text}
-                              onChange={(e) =>
-                                updateQuestionField(
-                                  qq.id,
-                                  "text",
-                                  e.target.value,
-                                )
+                            if (fullQuestionnaire) {
+                              const qid =
+                                fullQuestionnaire.questionnaireID ??
+                                fullQuestionnaire.id;
+                              if (
+                                Array.isArray(refreshedProject.questionnaires)
+                              ) {
+                                const idx =
+                                  refreshedProject.questionnaires.findIndex(
+                                    (q) =>
+                                      String(q.questionnaireID ?? q.id) ===
+                                      String(qid),
+                                  );
+                                if (idx !== -1) {
+                                  refreshedProject.questionnaires[idx] =
+                                    fullQuestionnaire;
+                                } else {
+                                  refreshedProject.questionnaires = [
+                                    fullQuestionnaire,
+                                    ...refreshedProject.questionnaires,
+                                  ];
+                                }
+                              } else {
+                                refreshedProject.questionnaires = [
+                                  fullQuestionnaire,
+                                ];
                               }
-                              className="w-full p-2 bg-[#1e1e1e] border border-gray-700 rounded text-gray-300"
-                            />
-                          </div>
+                            }
 
-                          <div className="grid grid-cols-3 gap-3 mb-2">
-                            <select
-                              value={qq.type}
-                              onChange={(e) =>
-                                updateQuestionField(
-                                  qq.id,
-                                  "type",
-                                  e.target.value,
-                                )
-                              }
-                              className="p-2 bg-[#1e1e1e] border border-gray-700 rounded text-gray-300"
-                            >
-                              <option value="single">Single Choice</option>
-                              <option value="multiple">Multiple Choice</option>
-                              <option value="text">Text</option>
-                            </select>
-                            <input
-                              type="number"
-                              value={qq.points}
-                              onChange={(e) =>
-                                updateQuestionField(
-                                  qq.id,
-                                  "points",
-                                  Number(e.target.value),
-                                )
-                              }
-                              className="p-2 bg-[#1e1e1e] border border-gray-700 rounded text-gray-300"
-                              placeholder="Points"
-                            />
-                            <div />
-                          </div>
-
-                          {(qq.type === "single" || qq.type === "multiple") && (
-                            <div>
-                              <div className="text-xs text-neutral-400 mb-1">
-                                Options
-                              </div>
-                              <div className="space-y-2">
-                                {(qq.options || []).map((opt, i) => (
-                                  <div key={i} className="flex gap-2">
-                                    <input
-                                      value={opt}
-                                      onChange={(e) =>
-                                        updateOption(qq.id, i, e.target.value)
+                            setProjects((prev) =>
+                              Array.isArray(prev)
+                                ? prev.map((p) =>
+                                    p.projectID === refreshedProject.projectID
+                                      ? refreshedProject
+                                      : p,
+                                  )
+                                : [refreshedProject],
+                            );
+                            setEditProject(refreshedProject);
+                            setSelectedProject(refreshedProject);
+                          } else {
+                            setProjects((prev) =>
+                              Array.isArray(prev)
+                                ? prev.map((p) =>
+                                    p.projectID === editProject.projectID
+                                      ? {
+                                          ...p,
+                                          questionnaires: [fullQuestionnaire],
+                                        }
+                                      : p,
+                                  )
+                                : [],
+                            );
+                            setEditProject((ep) => ({
+                              ...(ep || {}),
+                              questionnaires: [fullQuestionnaire],
+                            }));
+                            setSelectedProject((sp) => ({
+                              ...(sp || {}),
+                              questionnaires: [fullQuestionnaire],
+                            }));
+                          }
+                        } else {
+                          setProjects((prev) =>
+                            Array.isArray(prev)
+                              ? prev.map((p) =>
+                                  p.projectID === editProject.projectID
+                                    ? {
+                                        ...p,
+                                        questionnaires: [fullQuestionnaire],
                                       }
-                                      className="flex-1 p-2 bg-[#1e1e1e] border border-gray-700 rounded text-gray-300"
-                                    />
-                                    <button
-                                      onClick={() => removeOption(qq.id, i)}
-                                      className="px-2 py-1 bg-[#2a2a2a] rounded text-sm text-red-400"
-                                    >
-                                      X
-                                    </button>
-                                  </div>
-                                ))}
-                                <button
-                                  onClick={() => addOption(qq.id)}
-                                  className="mt-2 px-3 py-1 bg-[#2a2a2a] rounded text-sm text-gray-300"
-                                >
-                                  Add Option
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end gap-3 mt-4">
-                    <button
-                      onClick={() => {
+                                    : p,
+                                )
+                              : [],
+                          );
+                          setEditProject((ep) => ({
+                            ...(ep || {}),
+                            questionnaires: [fullQuestionnaire],
+                          }));
+                          setSelectedProject((sp) => ({
+                            ...(sp || {}),
+                            questionnaires: [fullQuestionnaire],
+                          }));
+                        }
+                      } catch (err) {
+                        console.warn(
+                          "Failed to refresh project after questionnaire save",
+                          err,
+                        );
+                      } finally {
                         setShowAddQuestionnaire(false);
                         resetQuestionnaireBuilder();
-                      }}
-                      className="bg-[#2a2a2a] px-4 py-2 rounded text-gray-300"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={() =>
-                        requestConfirm({
-                          type: "saveQuestionnaire",
-                          projectID: editProject.projectID,
-                        })
+                        setBuilderInitialQuestionnaire(null);
                       }
-                      className="bg-gradient-to-r from-[#4183E8] to-[#284CC4] text-white px-4 py-2 rounded font-semibold"
-                    >
-                      Save Questionnaire
-                    </button>
-                  </div>
+                    }}
+                    onCancel={() => {
+                      setShowAddQuestionnaire(false);
+                      resetQuestionnaireBuilder();
+                      setBuilderInitialQuestionnaire(null);
+                    }}
+                  />
                 </div>
               </OverlayModal>
             )}

@@ -6,11 +6,7 @@ export default function AdminRoute({ children }) {
   if (loading) return null;
   if (!user) return <Navigate to="/" replace />;
 
-  //   const isAdmin = user.roleID && Number(user.roleID) === 1;
-  const isAdmin =
-    typeof user.email === "string" &&
-    user.email.toLowerCase() === "admin@gmail.com";
-
+  const isAdmin = user.roleID && Number(user.roleID) === 1;
   if (!isAdmin) return <Navigate to="/" replace />;
 
   return children;

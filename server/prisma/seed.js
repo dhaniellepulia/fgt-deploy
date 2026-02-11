@@ -71,6 +71,16 @@ async function main() {
     create: { userStatusID: 3, statusName: "Deleted", description: "Deleted" },
   });
 
+  await prisma.userStatus.upsert({
+    where: { userStatusID: 4 },
+    update: { statusName: "Pending", description: "Pending approval" },
+    create: {
+      userStatusID: 4,
+      statusName: "Pending",
+      description: "Pending approval",
+    },
+  });
+
   await prisma.platformLanguage.upsert({
     where: { platformLanguageID: 1 },
     update: { languageCode: "en", languageName: "English", sortOrder: 1 },
@@ -318,7 +328,8 @@ async function main() {
   }
 
   for (const [name, platformSet] of gameMap.entries()) {
-    const platforms = platformSet.size > 1 ? "Multi" : Array.from(platformSet)[0] || null;
+    const platforms =
+      platformSet.size > 1 ? "Multi" : Array.from(platformSet)[0] || null;
     await prisma.game.upsert({
       where: { name },
       update: { platforms, isActive: true },

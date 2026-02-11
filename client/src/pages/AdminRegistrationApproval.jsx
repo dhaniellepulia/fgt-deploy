@@ -1,183 +1,11 @@
-//Changes get saved only in state
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import TopBar from "../components/layouts/TopBar";
 import OverlayModal from "../components/OverlayModal";
 import { countries } from "../data/countries";
 import ConfirmDialog from "../components/ConfirmDialog";
-
-// Mockup users
-const initialUsers = [
-  {
-    userID: 1,
-    email: "sample1@gmail.com",
-    passwordHash: "$2b$10$mockhash123",
-    isEmailVerified: true,
-    emailVerifiedAt: null,
-
-    roleID: 1,
-    userStatusID: 1,
-    communitySettingID: 0,
-
-    firstName: "John",
-    lastName: "Cruz",
-    phoneNumber: "+639171234567",
-    discordID: "john#1234",
-    platformLanguageID: 1,
-    birthdate: new Date("1998-06-12"),
-    countryOriginCode: "PH",
-    countryResidenceCode: "PH",
-    gender: "Male",
-    spokenLanguages: ["English", "Filipino"],
-    experienceLevel: "Intermediate",
-    recentGameID: null,
-
-    lastLoginAt: null,
-    onboardingProfileCompleted: true,
-    onboardingQuestionnaireCompleted: true,
-    onboardingClientCompleted: true,
-
-    createdAt: new Date("2026-01-10T08:00:00Z"),
-    updatedAt: null,
-    deletedAt: null,
-  },
-
-  {
-    userID: 2,
-    email: "sample2@gmail.com",
-    passwordHash: "$2b$10$mockhash456",
-    isEmailVerified: true,
-    emailVerifiedAt: null,
-
-    roleID: 2,
-    userStatusID: 1,
-    communitySettingID: 1,
-
-    firstName: "Sara",
-    lastName: "Lee",
-    phoneNumber: "+639189876543",
-    discordID: null,
-    platformLanguageID: 1,
-    birthdate: new Date("1993-04-02"),
-    countryOriginCode: "KR",
-    countryResidenceCode: "KR",
-    gender: "Female",
-    spokenLanguages: ["English", "Korean"],
-    experienceLevel: "Advanced",
-    recentGameID: null,
-
-    lastLoginAt: null,
-    onboardingProfileCompleted: true,
-    onboardingQuestionnaireCompleted: true,
-    onboardingClientCompleted: true,
-
-    createdAt: new Date("2026-02-01T11:00:00Z"),
-    updatedAt: null,
-    deletedAt: null,
-  },
-
-  {
-    userID: 3,
-    email: "sample3@gmail.com",
-    passwordHash: "$2b$10$mockhash789",
-    isEmailVerified: false,
-    emailVerifiedAt: null,
-
-    roleID: 1,
-    userStatusID: 2,
-    communitySettingID: 0,
-
-    firstName: "Hajime",
-    lastName: "Isayama",
-    phoneNumber: null,
-    discordID: null,
-    platformLanguageID: 2,
-    birthdate: new Date("2002-10-25"),
-    countryOriginCode: "JP",
-    countryResidenceCode: "JP",
-    gender: "Male",
-    spokenLanguages: ["English", "Japanese"],
-    experienceLevel: "Beginner",
-    recentGameID: null,
-
-    lastLoginAt: null,
-    onboardingProfileCompleted: false,
-    onboardingQuestionnaireCompleted: false,
-    onboardingClientCompleted: false,
-
-    createdAt: new Date("2026-01-25T06:10:00Z"),
-    updatedAt: null,
-    deletedAt: null,
-  },
-
-  {
-    userID: 4,
-    email: "sample4@gmail.com",
-    passwordHash: "$2b$10$mockhash321",
-    isEmailVerified: true,
-    emailVerifiedAt: null,
-
-    roleID: 1,
-    userStatusID: 1,
-    communitySettingID: 0,
-
-    firstName: "Alex",
-    lastName: "Tan",
-    phoneNumber: "+639199112233",
-    discordID: "alexdev#5678",
-    platformLanguageID: 3,
-    birthdate: new Date("1996-01-18"),
-    countryOriginCode: "SG",
-    countryResidenceCode: "KR",
-    gender: "Non-binary",
-    spokenLanguages: ["English", "Mandarin"],
-    experienceLevel: "Expert",
-    recentGameID: null,
-
-    lastLoginAt: null,
-    onboardingProfileCompleted: true,
-    onboardingQuestionnaireCompleted: false,
-    onboardingClientCompleted: true,
-
-    createdAt: new Date("2025-12-01T14:00:00Z"),
-    updatedAt: null,
-    deletedAt: null,
-  },
-
-  {
-    userID: 5,
-    email: "sample5@gmail.com",
-    passwordHash: "$2b$10$mockhash654",
-    isEmailVerified: true,
-    emailVerifiedAt: null,
-
-    roleID: 1,
-    userStatusID: 3,
-    communitySettingID: 0,
-
-    firstName: "Jamie",
-    lastName: "Santos",
-    phoneNumber: null,
-    discordID: null,
-    platformLanguageID: 1,
-    birthdate: null,
-    countryOriginCode: "PH",
-    countryResidenceCode: "PH",
-    gender: null,
-    spokenLanguages: ["Filipino"],
-    experienceLevel: "Intermediate",
-    recentGameID: null,
-
-    lastLoginAt: null,
-    onboardingProfileCompleted: true,
-    onboardingQuestionnaireCompleted: true,
-    onboardingClientCompleted: true,
-
-    createdAt: new Date("2026-01-20T06:50:00Z"),
-    updatedAt: null,
-    deletedAt: null,
-  },
-];
+import { useAuth } from "../auth/AuthContext";
+import { request, authHeaders } from "../api/http";
 
 const getCountryName = (code) => {
   if (!code) return "";
@@ -191,15 +19,49 @@ const fmt = (v) => {
   return isNaN(d.getTime()) ? String(v) : d.toLocaleString();
 };
 
-function AdminRegistrationApproval() {
-  const [users, setUsers] = useState(initialUsers);
+export default function AdminRegistrationApproval() {
+  const { token } = useAuth();
+  const [tab, setTab] = useState("playtester");
+  const [playtesters, setPlaytesters] = useState([]);
+  const [clients, setClients] = useState([]);
   const [sortBy, setSortBy] = useState("userID");
   const [direction, setDirection] = useState("asc");
   const [selectedUser, setSelectedUser] = useState(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmPayload, setConfirmPayload] = useState(null);
-  const sortedUsers = useMemo(() => {
-    const arr = [...users];
+
+  const loadPending = async (role) => {
+    try {
+      const q = role === "client" ? "client" : "playtester";
+      const json = await request(`/admin/users?role=${q}`, {
+        headers: authHeaders(token),
+      });
+      const items = (json.items || [])
+        .map((u) => ({ ...u, userID: u.userID }))
+        .filter((u) => Number(u.userStatusID) === 4);
+      if (q === "client") setClients(items);
+      else setPlaytesters(items);
+    } catch (err) {
+      console.error("loadPending error", err.message || err);
+    }
+  };
+
+  useEffect(() => {
+    if (!token) return;
+    loadPending("playtester");
+    loadPending("client");
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+
+    loadPending(tab);
+  }, [tab, token]);
+
+  const activeList = tab === "playtester" ? playtesters : clients;
+
+  const sortedList = useMemo(() => {
+    const arr = [...activeList];
     const cmp = (a, b) => {
       if (sortBy === "userID") return Number(a.userID) - Number(b.userID);
       if (sortBy === "country") {
@@ -220,9 +82,11 @@ function AdminRegistrationApproval() {
     };
     arr.sort((a, b) => (direction === "asc" ? cmp(a, b) : -cmp(a, b)));
     return arr;
-  }, [users, sortBy, direction]);
+  }, [activeList, sortBy, direction]);
 
-  const openUser = (user) => setSelectedUser(user);
+  const openUser = (user) => {
+    setSelectedUser(user);
+  };
   const closeModal = () => setSelectedUser(null);
 
   const requestApproveUser = (userID, email) => {
@@ -235,22 +99,45 @@ function AdminRegistrationApproval() {
     setConfirmOpen(true);
   };
 
-  const approveUser = (userID) => {
-    setUsers((prev) =>
-      prev.map((u) => (u.userID === userID ? { ...u, userStatusID: 1 } : u)),
-    );
-    setConfirmOpen(false);
-    setConfirmPayload(null);
-    closeModal();
+  const approveUser = async (userID) => {
+    try {
+      await request(`/admin/users/${userID}`, {
+        method: "PATCH",
+        headers: authHeaders(token),
+        body: JSON.stringify({ userStatusID: 1 }),
+      });
+
+      setPlaytesters((p) =>
+        p.filter((u) => Number(u.userID) !== Number(userID)),
+      );
+      setClients((c) => c.filter((u) => Number(u.userID) !== Number(userID)));
+    } catch (err) {
+      console.error("approveUser error", err.message || err);
+    } finally {
+      setConfirmOpen(false);
+      setConfirmPayload(null);
+      closeModal();
+    }
   };
 
-  const disapproveUser = (userID) => {
-    setUsers((prev) =>
-      prev.map((u) => (u.userID === userID ? { ...u, userStatusID: 3 } : u)),
-    );
-    setConfirmOpen(false);
-    setConfirmPayload(null);
-    closeModal();
+  const disapproveUser = async (userID) => {
+    try {
+      await request(`/admin/users/${userID}`, {
+        method: "PATCH",
+        headers: authHeaders(token),
+        body: JSON.stringify({ userStatusID: 3 }),
+      });
+      setPlaytesters((p) =>
+        p.filter((u) => Number(u.userID) !== Number(userID)),
+      );
+      setClients((c) => c.filter((u) => Number(u.userID) !== Number(userID)));
+    } catch (err) {
+      console.error("disapproveUser error", err.message || err);
+    } finally {
+      setConfirmOpen(false);
+      setConfirmPayload(null);
+      closeModal();
+    }
   };
 
   return (
@@ -264,9 +151,26 @@ function AdminRegistrationApproval() {
         <TopBar />
       </header>
 
+      <div className="mb-5 flex gap-3">
+        <button
+          onClick={() => setTab("playtester")}
+          className={`px-3 pb-2 text-sm ${tab === "playtester" ? "text-[#F9B71E] border-b-2 border-[#F9B71E]" : "text-gray-300"}`}
+        >
+          Playtester
+        </button>
+        <button
+          onClick={() => setTab("client")}
+          className={`px-3 pb-2 text-sm ${tab === "client" ? "text-[#F9B71E] border-b-2 border-[#F9B71E]" : "text-gray-300"}`}
+        >
+          Client
+        </button>
+      </div>
+
       <div className="rounded-xl bg-[#252525] p-8">
         <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-10 gap-3">
-          <h4 className="text-white text-xl font-bold lg:mb-8">Accounts</h4>
+          <h4 className="text-white text-xl font-bold lg:mb-8">
+            Pending Accounts
+          </h4>
 
           <div className="flex items-center gap-3">
             <label className="text-sm text-gray-300">Sort by</label>
@@ -312,7 +216,7 @@ function AdminRegistrationApproval() {
 
         <div className="space-y-2 overflow-x-scroll lg:overflow-hidden">
           <div className="space-y-2 w-max lg:w-full">
-            {sortedUsers.map((user) => (
+            {sortedList.map((user) => (
               <div
                 key={user.userID}
                 role="button"
@@ -384,33 +288,19 @@ function AdminRegistrationApproval() {
               </div>
 
               <div>
-                <div className="text-xs text-neutral-400">Experience Level</div>
-                <div className="font-semibold text-white">
-                  {selectedUser.experienceLevel || "-"}
-                </div>
-              </div>
-
-              <div>
-                <div className="text-xs text-neutral-400">Spoken Language</div>
-                <div className="font-semibold text-white">
-                  <span>{selectedUser.spokenLanguages?.join(", ")}</span>
-                </div>
-              </div>
-
-              <div>
                 <div className="text-xs text-neutral-400">Onboarding</div>
                 <div className="font-semibold text-white">
                   Profile:{" "}
                   {selectedUser.onboardingProfileCompleted ? "Yes" : "No"},
                   Questionnaire:{" "}
                   {selectedUser.onboardingQuestionnaireCompleted ? "Yes" : "No"}
-                  , Client:{" "}
+                  , , Client:{" "}
                   {selectedUser.onboardingClientCompleted ? "Yes" : "No"}
                 </div>
               </div>
 
               <div>
-                <div className="text-xs text-neutral-400">Created At</div>
+                <div className="text-xs text-neutral-400">Registered At</div>
                 <div className="font-semibold text-white">
                   {fmt(selectedUser.createdAt)}
                 </div>
@@ -453,6 +343,7 @@ function AdminRegistrationApproval() {
           </div>
         </OverlayModal>
       )}
+
       <ConfirmDialog
         isOpen={confirmOpen}
         title={
@@ -488,5 +379,3 @@ function AdminRegistrationApproval() {
     </div>
   );
 }
-
-export default AdminRegistrationApproval;

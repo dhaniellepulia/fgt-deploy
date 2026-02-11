@@ -32,11 +32,18 @@ export function AuthProvider({ children }) {
   const login = async (credentials) => {
     const res = await authApi.login(credentials);
     persistSession(res.token, res.user);
+    return res;
   };
 
   const register = async (payload) => {
     const res = await authApi.register(payload);
+    if (res?.pending) {
+      clearSession();
+      if (res.user) setUser(res.user);
+      return res;
+    }
     persistSession(res.token, res.user);
+    return res;
   };
 
   const logout = () => {

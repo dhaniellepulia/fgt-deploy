@@ -40,12 +40,14 @@ import AccountManagement from "./pages/AdminAccountManagement.jsx";
 import RegistrationApproval from "./pages/AdminRegistrationApproval.jsx";
 import ProjectManagement from "./pages/AdminProjectManagement.jsx";
 import Reports from "./pages/AdminReports.jsx";
+import PendingAccount from "./pages/PendingAccount.jsx";
 function App() {
   return (
     <Routes>
       {/* Public routes */}
       <Route path="/" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/pending" element={<PendingAccount />} />
 
       <Route element={<ExternalLayout />}>
         <Route path="/faq" element={<Faq />} />

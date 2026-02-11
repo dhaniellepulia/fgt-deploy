@@ -7,11 +7,8 @@ import { useAuth } from "../../auth/AuthContext";
 
 function AppLayout() {
   const { user } = useAuth();
-  // const isAdmin = user && Number(user.roleID) === 1;
-  const isAdmin =
-    user &&
-    typeof user.email === "string" &&
-    user.email.toLowerCase() === "admin@gmail.com";
+  const isAdmin = user && Number(user.roleID) === 1;
+
   return (
     <div className="flex flex-col lg:flex-row max-h-screen bg-[#1F1F1F] text-white">
       {isAdmin ? <AdminSidebar /> : <Sidebar />}

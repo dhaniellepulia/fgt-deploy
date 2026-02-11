@@ -1,4 +1,3 @@
-// main app sidebar
 import { NavLink } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "../../auth/AuthContext";

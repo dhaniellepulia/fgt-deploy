@@ -1,10 +1,11 @@
-//Changes get saved only in state
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import TopBar from "../components/layouts/TopBar";
 import OverlayModal from "../components/OverlayModal";
 import { countries } from "../data/countries";
 import ConfirmDialog from "../components/ConfirmDialog";
+import { useAuth } from "../auth/AuthContext";
+import { request, authHeaders } from "../api/http";
 
 const fmt = (v) => {
   if (!v) return "";
@@ -18,95 +19,10 @@ const getCountryName = (code) => {
   return found ? found.name : code;
 };
 
-// Mock data
-const initialPlaytesters = [
-  {
-    userID: 1,
-    email: "tester1@example.com",
-    roleID: 2,
-    userStatusID: 1,
-    firstName: "Tester",
-    lastName: "1",
-    phoneNumber: "+639171234567",
-    countryResidenceCode: "PH",
-    spokenLanguages: ["English", "Filipino"],
-    experienceLevel: "Intermediate",
-    createdAt: new Date("2026-02-02T10:25:00Z"),
-  },
-  {
-    userID: 2,
-    email: "tester2@example.com",
-    roleID: 2,
-    userStatusID: 1,
-    firstName: "Tester",
-    lastName: "2",
-    phoneNumber: "+821012345678",
-    countryResidenceCode: "KR",
-    spokenLanguages: ["Korean", "English"],
-    experienceLevel: "Advanced",
-    createdAt: new Date("2026-02-02T08:25:00Z"),
-  },
-  {
-    userID: 3,
-    email: "tester3@example.com",
-    roleID: 2,
-    userStatusID: 1,
-    firstName: "Tester",
-    lastName: "3",
-    phoneNumber: null,
-    countryResidenceCode: "JP",
-    spokenLanguages: ["Japanese"],
-    experienceLevel: "Beginner",
-    createdAt: new Date("2026-01-24T13:25:00Z"),
-  },
-  {
-    userID: 4,
-    email: "tester4@example.com",
-    roleID: 2,
-    userStatusID: 1,
-    firstName: "Tester",
-    lastName: "4",
-    phoneNumber: null,
-    countryResidenceCode: "CN",
-    spokenLanguages: ["Mandarin"],
-    experienceLevel: "Intermediate",
-    createdAt: new Date("2026-01-15T07:25:00Z"),
-  },
-];
-
-const initialClients = [
-  {
-    userID: 101,
-    email: "client1@example.com",
-    roleID: 3,
-    userStatusID: 1,
-    firstName: "Client",
-    lastName: "1",
-    phoneNumber: "+442071234567",
-    countryResidenceCode: "GB",
-    spokenLanguages: ["English"],
-    experienceLevel: "N/A",
-    createdAt: new Date("2026-01-10T09:00:00Z"),
-  },
-  {
-    userID: 102,
-    email: "client2@example.com",
-    roleID: 3,
-    userStatusID: 1,
-    firstName: "Client",
-    lastName: "2",
-    phoneNumber: null,
-    countryResidenceCode: "US",
-    spokenLanguages: ["English"],
-    experienceLevel: "N/A",
-    createdAt: new Date("2026-01-20T11:10:00Z"),
-  },
-];
-
 export default function AdminAccountManagement() {
   const [tab, setTab] = useState("playtester");
-  const [playtesters, setPlaytesters] = useState(initialPlaytesters);
-  const [clients, setClients] = useState(initialClients);
+  const [playtesters, setPlaytesters] = useState([]);
+  const [clients, setClients] = useState([]);
 
   const [sortBy, setSortBy] = useState("userID");
   const [direction, setDirection] = useState("asc");
@@ -127,7 +43,34 @@ export default function AdminAccountManagement() {
 
   const [editCopy, setEditCopy] = useState(null);
 
+  const [errorOpen, setErrorOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
   const activeList = tab === "playtester" ? playtesters : clients;
+
+  const { token } = useAuth();
+
+  const loadUsers = async (role) => {
+    try {
+      const q = role === "client" ? "client" : "playtester";
+      const json = await request(`/admin/users?role=${q}`, {
+        headers: authHeaders(token),
+      });
+      const items = (json.items || []).map((u) => ({
+        ...u,
+        userID: u.userID,
+      }));
+      if (q === "client") setClients(items);
+      else setPlaytesters(items);
+    } catch (err) {
+      console.error("loadUsers error", err.message || err);
+    }
+  };
+
+  useEffect(() => {
+    if (!token) return;
+    loadUsers(tab);
+  }, [tab, token]);
 
   const sortedList = useMemo(() => {
     const arr = [...activeList];
@@ -162,14 +105,31 @@ export default function AdminAccountManagement() {
     setEditCopy(null);
   };
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (!editCopy) return;
-    const updater = tab === "playtester" ? setPlaytesters : setClients;
-    updater((prev) =>
-      prev.map((u) => (u.userID === editCopy.userID ? { ...editCopy } : u)),
-    );
-    setSelectedUser(editCopy);
-    setEditCopy({ ...editCopy });
+    try {
+      const body = {
+        email: editCopy.email,
+        firstName: editCopy.firstName,
+        lastName: editCopy.lastName,
+        phoneNumber: editCopy.phoneNumber,
+        countryResidenceCode: editCopy.countryResidenceCode,
+        userStatusID: editCopy.userStatusID,
+      };
+      if (editCopy.password) body.password = editCopy.password;
+      await request(`/admin/users/${editCopy.userID}`, {
+        method: "PATCH",
+        headers: authHeaders(token),
+        body: JSON.stringify(body),
+      });
+      await loadUsers(tab);
+      setSelectedUser(null);
+      setEditCopy(null);
+      setConfirmOpen(false);
+      setConfirmPayload(null);
+    } catch (err) {
+      console.error("saveEdit error", err.message || err);
+    }
   };
 
   const openAdd = () => {
@@ -184,25 +144,31 @@ export default function AdminAccountManagement() {
     setIsAddOpen(true);
   };
 
-  const createAccount = () => {
-    const list = tab === "playtester" ? playtesters : clients;
-    const nextID = Math.max(...list.map((u) => Number(u.userID)), 0) + 1;
-    const newUser = {
-      userID: nextID,
-      email: addForm.email || `user${nextID}@example.com`,
-      roleID: tab === "playtester" ? 2 : 3,
-      userStatusID: 1,
-      firstName: addForm.firstName || "",
-      lastName: addForm.lastName || "",
-      phoneNumber: addForm.phoneNumber || "",
-      countryResidenceCode: addForm.countryResidenceCode || "",
-      spokenLanguages: [],
-      experienceLevel: "",
-      createdAt: new Date(),
-    };
-    if (tab === "playtester") setPlaytesters((p) => [newUser, ...p]);
-    else setClients((c) => [newUser, ...c]);
-    setIsAddOpen(false);
+  const createAccount = async () => {
+    try {
+      const payload = {
+        role: tab === "client" ? "client" : "playtester",
+        email: addForm.email,
+        password: addForm.password,
+        firstName: addForm.firstName,
+        lastName: addForm.lastName,
+        phoneNumber: addForm.phoneNumber,
+        countryResidenceCode: addForm.countryResidenceCode,
+      };
+      await request("/admin/users", {
+        method: "POST",
+        headers: authHeaders(token),
+        body: JSON.stringify(payload),
+      });
+      setIsAddOpen(false);
+      await loadUsers(tab);
+    } catch (err) {
+      const msg = err?.message || "Failed to create account";
+      setErrorMessage(msg);
+      setErrorOpen(true);
+
+      console.error("createAccount error", msg);
+    }
   };
 
   const requestRemoveAccount = (userID, email) => {
@@ -210,13 +176,19 @@ export default function AdminAccountManagement() {
     setConfirmOpen(true);
   };
 
-  const removeAccount = (userID) => {
-    if (tab === "playtester")
-      setPlaytesters((p) => p.filter((u) => u.userID !== userID));
-    else setClients((c) => c.filter((u) => u.userID !== userID));
-    closeEdit();
-    setConfirmOpen(false);
-    setConfirmPayload(null);
+  const removeAccount = async (userID) => {
+    try {
+      await request(`/admin/users/${userID}`, {
+        method: "DELETE",
+        headers: authHeaders(token),
+      });
+      await loadUsers(tab);
+      closeEdit();
+      setConfirmOpen(false);
+      setConfirmPayload(null);
+    } catch (err) {
+      console.error("removeAccount error", err.message || err);
+    }
   };
 
   const requestSaveEdit = () => {
@@ -463,7 +435,6 @@ export default function AdminAccountManagement() {
                 {" "}
                 <div className="text-xs text-neutral-400">Password</div>{" "}
                 <input
-                  type="password"
                   value={editCopy.password || ""}
                   onChange={(e) =>
                     setEditCopy((p) => ({ ...p, password: e.target.value }))
@@ -609,6 +580,24 @@ export default function AdminAccountManagement() {
           </div>
         </OverlayModal>
       )}
+
+      <OverlayModal
+        isOpen={errorOpen}
+        onClose={() => setErrorOpen(false)}
+        title="Error"
+      >
+        <div className="space-y-4">
+          <div className="text-sm text-gray-300">{errorMessage}</div>
+          <div className="flex justify-end mt-4">
+            <button
+              onClick={() => setErrorOpen(false)}
+              className="bg-[#2a2a2a] px-4 py-2 rounded text-gray-300"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </OverlayModal>
 
       <ConfirmDialog
         isOpen={confirmOpen}
