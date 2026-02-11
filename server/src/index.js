@@ -27,7 +27,22 @@ const SELF_REGISTER_USER_STATUS_ID = Number(
 );
 const ACTIVE_USER_STATUS_ID = Number(process.env.ACTIVE_USER_STATUS_ID || 1);
 
-app.use(cors({ origin: true, credentials: true }));
+const FRONTEND_URL = (
+  process.env.FRONTEND_URL || "http://localhost:5173"
+).replace(/\/+$/, "");
+
+const corsOptions = {
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true); // allow non-browser or same-origin requests (e.g. curl, server)
+    cb(null, origin === FRONTEND_URL);
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions)); // enable preflight for all routes
 app.use(express.json());
 
 app.set("json replacer", (key, value) =>
