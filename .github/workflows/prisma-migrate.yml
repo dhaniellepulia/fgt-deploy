@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - 'server/prisma/**'
-      - 'server/package.json'
-      - 'server/**/schema.prisma'
+      - "server/prisma/**"
+      - "server/package.json"
+      - "server/**/schema.prisma"
 
 jobs:
   migrate:
@@ -28,6 +28,27 @@ jobs:
 
       - name: Generate Prisma client
         run: npx prisma generate
+
+      - name: Debug DB connectivity
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          apt-get update && apt-get install -y dnsutils netcat python3
+          python3 - <<'PY'
+          from urllib.parse import urlparse
+          u = urlparse("$DATABASE_URL")
+          print("HOST=" + (u.hostname or ""))
+          print("PORT=" + str(u.port or 5432))
+          PY
+          HOST=$(python3 - <<'PY'
+          from urllib.parse import urlparse
+          print(urlparse("$DATABASE_URL").hostname)
+          PY
+          )
+          echo "nslookup for $HOST"
+          nslookup "$HOST" || true
+          echo "TCP check for $HOST:5432"
+          nc -vz "$HOST" 5432 || true
 
       - name: Run migrations (deploy)
         env:
