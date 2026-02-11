@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import StoreCard from "../components/StoreCard.jsx";
 import { ChevronDown } from "lucide-react";
 import TopBar from "../components/layouts/TopBar.jsx";
+import coin from "../assets/coin.svg";
 
 function Store() {
   const [openGift, setOpenGift] = useState(false);
@@ -80,7 +81,7 @@ function Store() {
         <div className="flex flex-row items-center gap-2">
           <div className="flex flex-row items-center gap-2">
             <span className="text-[#F9B71E] font-bold">Balance</span>
-            <img src="../src/assets/coin.svg" alt="" />
+            <img src={coin} alt="Coin" className="w-4 h-4" />
             <span>5000</span>
           </div>
           <TopBar />
