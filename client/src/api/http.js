@@ -1,7 +1,13 @@
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const rawApiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
+export const API_URL = rawApiUrl.replace(/\/+$/, ""); // remove trailing slash
+
+function buildUrl(path) {
+  const p = path.startsWith("/") ? path : `/${path}`;
+  return `${API_URL}${p}`;
+}
 
 export async function request(path, options = {}) {
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetch(buildUrl(path), {
     ...options,
     headers: {
       "Content-Type": "application/json",
@@ -9,9 +15,7 @@ export async function request(path, options = {}) {
     },
   });
 
-  const isJson = res.headers
-    .get("content-type")
-    ?.includes("application/json");
+  const isJson = res.headers.get("content-type")?.includes("application/json");
   const body = isJson ? await res.json() : null;
 
   if (!res.ok) {
@@ -25,5 +29,3 @@ export async function request(path, options = {}) {
 export function authHeaders(token) {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
-
-export { API_URL };
