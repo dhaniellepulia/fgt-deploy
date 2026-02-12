@@ -43,6 +43,16 @@ function signToken(user) {
   );
 }
 
+app.get("/db-check", async (req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ ok: true, db: true });
+  } catch (err) {
+    console.error("DB check error", err);
+    res.status(500).json({ ok: false, db: false, error: err.message });
+  }
+});
+
 app.get("/health", (req, res) => res.json({ ok: true }));
 
 app.post("/auth/register", async (req, res) => {
