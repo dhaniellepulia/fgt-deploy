@@ -27,8 +27,22 @@ const SELF_REGISTER_USER_STATUS_ID = Number(
 );
 const ACTIVE_USER_STATUS_ID = Number(process.env.ACTIVE_USER_STATUS_ID || 1);
 
-app.use(cors({ origin: true, credentials: true }));
-app.options("*", cors({ origin: true, credentials: true }));
+const frontendUrl = process.env.FRONTEND_URL || "";
+const allowVercelPreviews = process.env.ALLOW_VERCEL_PREVIEWS === "true";
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    if (origin === frontendUrl) return callback(null, true);
+    if (allowVercelPreviews && origin.includes(".vercel.app"))
+      return callback(null, true);
+    return callback(new Error("Not allowed by CORS"), false);
+  },
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 app.use(express.json());
 
 app.set("json replacer", (key, value) =>
