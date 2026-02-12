@@ -1,5 +1,10 @@
 const rawApiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
-export const API_URL = rawApiUrl.replace(/\/+$/, ""); // remove trailing slash
+let API_URL = rawApiUrl.replace(/\/+$/, "");
+
+if (!/^https?:\/\//i.test(API_URL) && API_URL.length) {
+  API_URL = `https://${API_URL}`;
+}
+export { API_URL };
 
 function buildUrl(path) {
   const p = path.startsWith("/") ? path : `/${path}`;
