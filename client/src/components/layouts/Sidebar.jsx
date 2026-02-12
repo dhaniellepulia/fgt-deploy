@@ -57,7 +57,7 @@ function Sidebar() {
       >
         {/* HEADER */}
         <div>
-          <div className="flex items-center justify-between mb-10">
+          <div className="flex items-center justify-between mb-12">
             <img src={logo} alt="logo" className="max-w-36" />
 
             {/* close button (mobile only) */}
