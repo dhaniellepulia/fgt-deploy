@@ -2,6 +2,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import LanguageSelector from "./LanguageSelector.jsx";
 import { useNavigate } from "react-router-dom";
+import logo from "../../assets/logo PNE.png";
 
 function ExternalNavBar() {
   const { t } = useTranslation();
@@ -12,7 +13,7 @@ function ExternalNavBar() {
         <div>
           <img
             onClick={() => navigate("/")}
-            src="../../src/assets/logo PNE.png"
+            src={logo}
             className="max-w-30 h-auto cursor-pointer"
           />
         </div>
