@@ -25,7 +25,9 @@ export async function request(path, options = {}) {
 
   if (!res.ok) {
     const message = body?.error || `Request failed (${res.status})`;
-    throw new Error(message);
+    const err = new Error(message);
+    err.status = res.status;
+    throw err;
   }
 
   return body;

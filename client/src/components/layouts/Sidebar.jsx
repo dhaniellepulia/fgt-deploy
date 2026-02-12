@@ -58,11 +58,7 @@ function Sidebar() {
         {/* HEADER */}
         <div>
           <div className="flex items-center justify-between mb-10">
-            <img
-              src="../src/assets/logo PNE.png"
-              alt="logo"
-              className="max-w-36"
-            />
+            <img src={logo} alt="logo" className="max-w-36" />
 
             {/* close button (mobile only) */}
             <button className="lg:hidden" onClick={closeMenu}>

@@ -1,7 +1,7 @@
 const { PrismaClient } = require("@prisma/client");
 const fs = require("fs");
 const path = require("path");
-
+const bcrypt = require("bcryptjs");
 const prisma = new PrismaClient();
 
 function loadSeedData(fileName) {
@@ -334,6 +334,30 @@ async function main() {
       where: { name },
       update: { platforms, isActive: true },
       create: { name, platforms, isActive: true },
+    });
+  }
+
+  // add admin account
+  const adminEmail = "admin@gmail.com";
+  const adminPassword = "admin";
+  const adminRoleID = 1;
+  const adminStatusID = 1;
+
+  const existingAdmin = await prisma.user.findUnique({
+    where: { email: adminEmail },
+  });
+  if (!existingAdmin) {
+    const passwordHash = await bcrypt.hash(adminPassword, 10);
+    await prisma.user.create({
+      data: {
+        email: adminEmail,
+        passwordHash,
+        roleID: BigInt(adminRoleID),
+        userStatusID: adminStatusID,
+        communitySettingID: 0,
+        firstName: "Admin",
+        lastName: "User",
+      },
     });
   }
 }

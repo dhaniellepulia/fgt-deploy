@@ -92,7 +92,9 @@ export function AuthProvider({ children }) {
         }
       })
       .catch(() => {
-        clearSession();
+        if (err?.status === 401) {
+          clearSession();
+        }
       })
       .finally(() => setLoading(false));
   }, []);
