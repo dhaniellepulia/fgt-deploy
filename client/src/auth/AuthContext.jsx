@@ -91,10 +91,8 @@ export function AuthProvider({ children }) {
           setUser(merged);
         }
       })
-      .catch(() => {
-        if (err?.status === 401) {
-          clearSession();
-        }
+      .catch((err) => {
+        if (err?.status === 401) clearSession();
       })
       .finally(() => setLoading(false));
   }, []);

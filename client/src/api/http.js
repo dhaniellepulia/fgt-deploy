@@ -29,7 +29,6 @@ export async function request(path, options = {}) {
     err.status = res.status;
     throw err;
   }
-
   return body;
 }
 
