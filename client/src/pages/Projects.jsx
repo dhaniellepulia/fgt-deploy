@@ -18,6 +18,20 @@ const statusById = {
   3: "Past",
 };
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+
+const resolveImageUrlFromItem = (item) => {
+  const url =
+    item?.imageUrl ||
+    item?.projectImageUrl ||
+    item?.project?.projectImageUrl ||
+    item?.project?.imageUrl ||
+    item?.projectImageUrl ||
+    "";
+  if (!url) return null;
+  return url.startsWith("/") ? `${API_BASE}${url}` : url;
+};
+
 function mapClientProjectsToItems(projects) {
   return projects.flatMap((project) => {
     const questionnaires = project.questionnaires || [];
@@ -150,8 +164,8 @@ function Projects() {
       await joinProject(projectID, token);
       setProjects((prev) =>
         prev.map((project) =>
-          project.id === projectID ? { ...project, isJoined: true } : project
-        )
+          project.id === projectID ? { ...project, isJoined: true } : project,
+        ),
       );
     } catch (err) {
       alert(err.message || "Failed to join project");
@@ -304,18 +318,22 @@ function Projects() {
           ) : error ? (
             <p className="text-sm text-red-400">{error}</p>
           ) : filteredProjects.length > 0 ? (
-            <div className="grid h-full bg-[#252525] p-8 rounded-xl grid-cols-1 sm:grid-cols-3 md:grid-cols-5 gap-4">
+            <div className="grid h-full bg-[#252525] p-8 rounded-xl grid-cols-1 sm:grid-cols-3 xl:grid-cols-4 gap-4">
               {filteredProjects.map((project) => {
-                const actionLabel = project.isJoined ? "Joined" : "Apply to Join";
+                // const actionLabel = project.isJoined
+                //   ? "Joined"
+                //   : "Apply to Join";
+                const imageSrc = resolveImageUrlFromItem(project);
+                const projectWithImage = { ...project, imageUrl: imageSrc };
                 return (
                   <ProjectCard
                     key={project.id}
-                    project={project}
-                    actionLabel={actionLabel}
-                    actionDisabled={
-                      project.isJoined || joiningProjectID === project.id
-                    }
-                    onAction={() => handleJoinProject(project.id)}
+                    project={projectWithImage}
+                    // actionLabel={actionLabel}
+                    // actionDisabled={
+                    //   project.isJoined || joiningProjectID === project.id
+                    // }
+                    // onAction={() => handleJoinProject(project.id)}
                   />
                 );
               })}

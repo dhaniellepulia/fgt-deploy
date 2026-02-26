@@ -1,17 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import TopBar from "../components/layouts/TopBar.jsx";
-import {
-  fetchProjectQuestionnaire,
-  submitProjectQuestionnaireResponse,
-} from "../api/projects";
+import { fetchProjectQuestionnaire } from "../api/projects";
 import { useAuth } from "../auth/AuthContext";
-
+import { submitQuestionnaireResponse } from "../api/questionnaires.js";
 function ProjectQuestionnaire() {
   const { projectId, questionnaireId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { token } = useAuth();
 
+  const [responseID] = useState(
+    location.state?.questionnaireResponseID ?? null,
+  );
+  const [startedAt] = useState(location.state?.startedAt ?? null);
   const [questionnaire, setQuestionnaire] = useState(null);
   const [answers, setAnswers] = useState({});
   const [loading, setLoading] = useState(true);
@@ -27,7 +29,7 @@ function ProjectQuestionnaire() {
         const res = await fetchProjectQuestionnaire(
           projectId,
           questionnaireId,
-          token
+          token,
         );
         if (mounted) {
           setQuestionnaire(res.item);
@@ -66,7 +68,7 @@ function ProjectQuestionnaire() {
   const orderedQuestions = useMemo(() => {
     if (!questionnaire?.questions) return [];
     return [...questionnaire.questions].sort(
-      (a, b) => (a.displayOrder || 0) - (b.displayOrder || 0)
+      (a, b) => (a.displayOrder || 0) - (b.displayOrder || 0),
     );
   }, [questionnaire]);
 
@@ -163,12 +165,28 @@ function ProjectQuestionnaire() {
         }
       }
 
-      await submitProjectQuestionnaireResponse(
+      const result = await submitQuestionnaireResponse(
         projectId,
         questionnaireId,
         token,
-        { answers: payloadAnswers }
+        { answers: payloadAnswers },
+        responseID,
       );
+
+      // compute duration (minutes) if startedAt and submittedAt available
+      const returned = result.item ?? result;
+      const submittedAt = returned?.submittedAt ?? null;
+      const started = startedAt ?? returned?.startedAt ?? null;
+      if (started && submittedAt) {
+        const mins = Math.max(
+          0,
+          Math.round(
+            (new Date(submittedAt).getTime() - new Date(started).getTime()) /
+              60000,
+          ),
+        );
+        console.log("questionnaire durationMinutes:", mins);
+      }
       navigate(`/projects/${projectId}`);
     } catch (err) {
       setError(err.message || "Failed to submit questionnaire");
@@ -319,7 +337,8 @@ function ProjectQuestionnaire() {
                           type="radio"
                           name={`question-${question.questionID}`}
                           checked={
-                            response.selectedOptionID === option.questionOptionID
+                            response.selectedOptionID ===
+                            option.questionOptionID
                           }
                           onChange={() =>
                             updateAnswer(question.questionID, {
@@ -334,7 +353,8 @@ function ProjectQuestionnaire() {
                     {question.options?.some((opt) => opt.isOtherOption) &&
                       response.selectedOptionID &&
                       question.options.find(
-                        (opt) => opt.questionOptionID === response.selectedOptionID
+                        (opt) =>
+                          opt.questionOptionID === response.selectedOptionID,
                       )?.isOtherOption && (
                         <input
                           type="text"
@@ -356,7 +376,7 @@ function ProjectQuestionnaire() {
                     {question.options?.map((option) => {
                       const selected = Array.isArray(response.selectedOptionIDs)
                         ? response.selectedOptionIDs.includes(
-                            option.questionOptionID
+                            option.questionOptionID,
                           )
                         : false;
 
@@ -370,14 +390,14 @@ function ProjectQuestionnaire() {
                             checked={selected}
                             onChange={(event) => {
                               const current = Array.isArray(
-                                response.selectedOptionIDs
+                                response.selectedOptionIDs,
                               )
                                 ? response.selectedOptionIDs
                                 : [];
                               const next = event.target.checked
                                 ? [...current, option.questionOptionID]
                                 : current.filter(
-                                    (id) => id !== option.questionOptionID
+                                    (id) => id !== option.questionOptionID,
                                   );
                               updateAnswer(question.questionID, {
                                 selectedOptionIDs: next,
@@ -391,10 +411,11 @@ function ProjectQuestionnaire() {
                     })}
                     {question.options?.some((opt) => opt.isOtherOption) &&
                       Array.isArray(response.selectedOptionIDs) &&
-                      response.selectedOptionIDs.some((optionID) =>
-                        question.options.find(
-                          (opt) => opt.questionOptionID === optionID
-                        )?.isOtherOption
+                      response.selectedOptionIDs.some(
+                        (optionID) =>
+                          question.options.find(
+                            (opt) => opt.questionOptionID === optionID,
+                          )?.isOtherOption,
                       ) && (
                         <input
                           type="text"

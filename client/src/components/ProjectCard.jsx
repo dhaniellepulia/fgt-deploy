@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import Coin from "../assets/coin.svg";
 
 function ProjectCard({
   project,
@@ -10,22 +11,45 @@ function ProjectCard({
   const navigate = useNavigate();
   const isPlaytesterProject =
     typeof project.publishedQuestionnaireCount === "number";
-  const metaLeft = isPlaytesterProject
-    ? `${project.availableQuestionnaireCount ?? 0} available`
-    : `${project.durationMinutes ?? "N/A"}'`;
-  const metaRight = isPlaytesterProject
-    ? `${project.publishedQuestionnaireCount} published`
-    : project.projectTitle
-      ? project.projectTitle
-      : null;
+
+  const points =
+    project.pointsReward ??
+    project.questionnaire?.pointsReward ??
+    project.points ??
+    null;
+  const metaLeft = points != null ? `${points} pts` : "N/A";
+  // const metaLeft = isPlaytesterProject
+  //   ? `${project.availableQuestionnaireCount ?? 0} available`
+  //   : `${project.durationMinutes ?? "N/A"}'`;
+
+  // const metaRight = isPlaytesterProject
+  //   ? `${project.publishedQuestionnaireCount} published`
+  //   : project.projectTitle
+  //     ? project.projectTitle
+  //     : null;
 
   return (
     <div
       onClick={() => navigate(`/projects/${project.id}`)}
-      className="bg-[#323232] rounded-lg hover:bg-neutral-750 transition cursor-pointer"
+      className="bg-[#323232] rounded-lg hover:bg-neutral-750 transition cursor-pointer "
     >
-      <div className="aspect-video bg-neutral-300 rounded-t-md mb-3 flex items-center justify-center">
-        <span className="text-neutral-500 text-xs">Image</span>
+      <div
+        className="bg-neutral-300 rounded-t-md mb-3 overflow-hidden flex items-center justify-center w-full max-h-75"
+        style={{ aspectRatio: "3 / 5" }}
+      >
+        {project?.imageUrl ? (
+          <img
+            src={project.imageUrl}
+            alt={project.title || "project image"}
+            className="object-cover w-full h-full"
+            onError={(e) => {
+              console.error("Image failed to load:", project.imageUrl);
+              e.currentTarget.style.display = "none";
+            }}
+          />
+        ) : (
+          <div className="text-neutral-500 text-xs">No image</div>
+        )}
       </div>
 
       <div className="p-3 space-y-2">
@@ -33,12 +57,12 @@ function ProjectCard({
 
         <div className="flex justify-between gap-4 text-xs text-neutral-400">
           <span className="flex items-center gap-1">
-            <img src="/src/assets/time.svg" alt="" /> {metaLeft}
+            <img src={Coin} alt="" /> {metaLeft}
           </span>
-          {metaRight && <span className="truncate">{metaRight}</span>}
+          {/* {metaRight && <span className="truncate">{metaRight}</span>} */}
         </div>
 
-        {actionLabel && (
+        {/* {actionLabel && (
           <button
             onClick={(event) => {
               event.stopPropagation();
@@ -49,7 +73,7 @@ function ProjectCard({
           >
             {actionLabel}
           </button>
-        )}
+        )} */}
       </div>
     </div>
   );

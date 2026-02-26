@@ -1,10 +1,12 @@
 //// Dashboard > Store menu
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import StoreCard from "../components/StoreCard.jsx";
 import { ChevronDown } from "lucide-react";
 import TopBar from "../components/layouts/TopBar.jsx";
-
+import { useAuth } from "../auth/AuthContext";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 function Store() {
+  const { token } = useAuth();
   const [openGift, setOpenGift] = useState(false);
   const [openCountry, setOpenCountry] = useState(false);
   const [openAmount, setOpenAmount] = useState(false);
@@ -16,6 +18,47 @@ function Store() {
   const [amountRange, setAmountRange] = useState("All");
   const [currency, setCurrency] = useState("All");
   const [status, setStatus] = useState("All");
+
+  const [balance, setBalance] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadBalance() {
+      if (!token) {
+        if (mounted) setBalance(null);
+        return;
+      }
+      const headers = { Authorization: `Bearer ${token}` };
+      // try user point balance endpoint first
+      try {
+        const res = await fetch(`${API_BASE}/user-point-balance/me`, {
+          headers,
+        });
+        if (res.status === 401) {
+          console.debug(
+            "user-point-balance/me returned 401 — token invalid/expired",
+          );
+          if (mounted) setBalance(null);
+          return;
+        }
+        if (res.ok) {
+          const j = await res.json();
+          const item = j?.item ?? j;
+          const pts = item?.currentPoints ?? item?.current_points ?? null;
+          if (mounted && pts != null) {
+            setBalance(Number(pts));
+            return;
+          }
+        }
+      } catch (_) {}
+
+      if (mounted) setBalance(0);
+    }
+    loadBalance();
+    return () => {
+      mounted = false;
+    };
+  }, [token]);
 
   //Mock data for gift cards
   const giftcard = [
@@ -81,7 +124,7 @@ function Store() {
           <div className="flex flex-row items-center gap-2">
             <span className="text-[#F9B71E] font-bold">Balance</span>
             <img src="../src/assets/coin.svg" alt="" />
-            <span>5000</span>
+            <span>{balance != null ? balance : "—"}</span>
           </div>
           <TopBar />
         </div>

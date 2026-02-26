@@ -73,6 +73,7 @@ function buildProjectRoutes(prisma) {
               statusID: true,
               startsAt: true,
               endsAt: true,
+              pointsReward: true,
             },
           },
         },
@@ -81,6 +82,10 @@ function buildProjectRoutes(prisma) {
       const items = projects
         .map((project) => {
           const published = project.questionnaires.filter(isPublished);
+          const maxPoints =
+            published.length > 0
+              ? Math.max(...published.map((q) => q.pointsReward ?? 0))
+              : null;
           const isJoined = joinedSet.has(project.projectID.toString());
           if (!published.length && !isJoined) return null;
           const availableCount = published.filter((q) =>
@@ -90,6 +95,8 @@ function buildProjectRoutes(prisma) {
           return {
             id: project.projectID,
             title: project.title,
+            projectImageUrl: project.projectImageUrl || null,
+            pointsReward: maxPoints,
             description: project.description,
             gameTitle: project.gameTitle,
             gameGenre: project.gameGenre,
@@ -171,6 +178,7 @@ function buildProjectRoutes(prisma) {
       const item = {
         id: project.projectID,
         title: project.title,
+        projectImageUrl: project.projectImageUrl || null,
         description: project.description,
         gameTitle: project.gameTitle,
         gameGenre: project.gameGenre,
@@ -334,6 +342,239 @@ function buildProjectRoutes(prisma) {
     },
   );
 
+  // router.post(
+  //   "/projects/:projectId/questionnaires/:questionnaireId/responses",
+  //   requireRole(1, 2),
+  //   async (req, res, next) => {
+  //     try {
+  //       const projectID = BigInt(req.params.projectId);
+  //       const questionnaireID = BigInt(req.params.questionnaireId);
+  //       const testerUserID = BigInt(req.user.sub);
+  //       const { answers } = req.body;
+
+  //       if (!Array.isArray(answers)) {
+  //         return res.status(400).json({ error: "answers must be an array" });
+  //       }
+
+  //       const project = await loadProjectOr404(prisma, projectID);
+  //       if (!project) return res.status(404).json({ error: "Not found" });
+
+  //       if (!isAdmin(req)) {
+  //         const membership = await prisma.projectMembership.findUnique({
+  //           where: {
+  //             projectID_testerUserID: {
+  //               projectID,
+  //               testerUserID,
+  //             },
+  //           },
+  //         });
+  //         if (!membership) {
+  //           return res.status(403).json({ error: "Join required" });
+  //         }
+  //       }
+
+  //       const questionnaire = await prisma.questionnaire.findFirst({
+  //         where: {
+  //           questionnaireID,
+  //           projectID,
+  //           deletedAt: null,
+  //           statusID: 2,
+  //         },
+  //         include: {
+  //           questions: {
+  //             where: { deletedAt: null },
+  //             include: {
+  //               options: { where: { deletedAt: null } },
+  //               questionType: true,
+  //             },
+  //             orderBy: { displayOrder: "asc" },
+  //           },
+  //         },
+  //       });
+
+  //       if (!questionnaire) {
+  //         return res.status(404).json({ error: "Not found" });
+  //       }
+
+  //       if (!isAvailable(questionnaire)) {
+  //         return res
+  //           .status(403)
+  //           .json({ error: "Questionnaire is not available" });
+  //       }
+
+  //       const existing = await prisma.questionnaireResponse.findFirst({
+  //         where: {
+  //           questionnaireID,
+  //           testerUserID,
+  //         },
+  //       });
+  //       if (existing) {
+  //         return res.status(409).json({ error: "Already submitted" });
+  //       }
+
+  //       const answerLookup = new Map();
+  //       answers.forEach((answer) => {
+  //         if (!answer?.questionID) return;
+  //         answerLookup.set(answer.questionID.toString(), answer);
+  //       });
+
+  //       const now = new Date();
+  //       const response = await prisma.$transaction(async (tx) => {
+  //         const createdResponse = await tx.questionnaireResponse.create({
+  //           data: {
+  //             questionnaireID,
+  //             testerUserID,
+  //             responseStatusID: 2,
+  //             startedAt: now,
+  //             submittedAt: now,
+  //             ipAddress: req.ip,
+  //             userAgent: req.get("user-agent"),
+  //           },
+  //         });
+
+  //         for (const question of questionnaire.questions) {
+  //           const incoming = answerLookup.get(question.questionID.toString());
+  //           const typeCode = question.questionType?.typeCode;
+
+  //           if (!incoming) {
+  //             if (question.isRequired) {
+  //               throw new Error(
+  //                 `Missing required answer for question ${question.questionID}`,
+  //               );
+  //             }
+  //             continue;
+  //           }
+
+  //           const optionIds = new Set(
+  //             question.options.map((opt) => opt.questionOptionID.toString()),
+  //           );
+
+  //           let answerPayload = null;
+  //           let multiOptionIDs = null;
+
+  //           if (typeCode === "SHORT_TEXT" || typeCode === "LONG_TEXT") {
+  //             const value =
+  //               typeof incoming.answerText === "string"
+  //                 ? incoming.answerText.trim()
+  //                 : "";
+  //             if (question.isRequired && !value) {
+  //               throw new Error(
+  //                 `Missing required answer for question ${question.questionID}`,
+  //               );
+  //             }
+  //             if (!value) continue;
+  //             answerPayload = { answerText: value };
+  //           } else if (typeCode === "NUMBER" || typeCode === "SCALE") {
+  //             if (
+  //               incoming.answerNumber === undefined ||
+  //               incoming.answerNumber === null ||
+  //               incoming.answerNumber === ""
+  //             ) {
+  //               if (question.isRequired) {
+  //                 throw new Error(
+  //                   `Missing required answer for question ${question.questionID}`,
+  //                 );
+  //               }
+  //               continue;
+  //             }
+  //             answerPayload = { answerNumber: Number(incoming.answerNumber) };
+  //           } else if (typeCode === "DATE") {
+  //             if (!incoming.answerDate) {
+  //               if (question.isRequired) {
+  //                 throw new Error(
+  //                   `Missing required answer for question ${question.questionID}`,
+  //                 );
+  //               }
+  //               continue;
+  //             }
+  //             answerPayload = { answerDate: new Date(incoming.answerDate) };
+  //           } else if (typeCode === "SINGLE_CHOICE") {
+  //             const selected = incoming.selectedOptionID;
+  //             if (!selected) {
+  //               if (question.isRequired) {
+  //                 throw new Error(
+  //                   `Missing required answer for question ${question.questionID}`,
+  //                 );
+  //               }
+  //               continue;
+  //             }
+  //             if (!optionIds.has(selected.toString())) {
+  //               throw new Error(
+  //                 `Invalid option for question ${question.questionID}`,
+  //               );
+  //             }
+  //             answerPayload = {
+  //               selectedOptionID: BigInt(selected),
+  //               otherText: incoming.otherText || null,
+  //             };
+  //           } else if (typeCode === "MULTI_CHOICE") {
+  //             const selectedOptionIDs = Array.isArray(
+  //               incoming.selectedOptionIDs,
+  //             )
+  //               ? incoming.selectedOptionIDs
+  //               : [];
+  //             if (!selectedOptionIDs.length) {
+  //               if (question.isRequired) {
+  //                 throw new Error(
+  //                   `Missing required answer for question ${question.questionID}`,
+  //                 );
+  //               }
+  //               continue;
+  //             }
+  //             selectedOptionIDs.forEach((optionID) => {
+  //               if (!optionIds.has(optionID.toString())) {
+  //                 throw new Error(
+  //                   `Invalid option for question ${question.questionID}`,
+  //                 );
+  //               }
+  //             });
+  //             multiOptionIDs = selectedOptionIDs.map((optionID) =>
+  //               BigInt(optionID),
+  //             );
+  //             answerPayload = { otherText: incoming.otherText || null };
+  //           } else {
+  //             const value =
+  //               typeof incoming.answerText === "string"
+  //                 ? incoming.answerText.trim()
+  //                 : "";
+  //             if (question.isRequired && !value) {
+  //               throw new Error(
+  //                 `Missing required answer for question ${question.questionID}`,
+  //               );
+  //             }
+  //             if (!value) continue;
+  //             answerPayload = { answerText: value };
+  //           }
+
+  //           const createdAnswer = await tx.questionAnswer.create({
+  //             data: {
+  //               questionnaireResponseID:
+  //                 createdResponse.questionnaireResponseID,
+  //               questionID: question.questionID,
+  //               ...answerPayload,
+  //             },
+  //           });
+
+  //           if (multiOptionIDs?.length) {
+  //             await tx.questionAnswerOption.createMany({
+  //               data: multiOptionIDs.map((optionID) => ({
+  //                 questionAnswerID: createdAnswer.questionAnswerID,
+  //                 questionOptionID: optionID,
+  //               })),
+  //             });
+  //           }
+  //         }
+
+  //         return createdResponse;
+  //       });
+
+  //       return res.status(201).json({ item: response });
+  //     } catch (err) {
+  //       return next(err);
+  //     }
+  //   },
+  // );
+
   router.post(
     "/projects/:projectId/questionnaires/:questionnaireId/responses",
     requireRole(1, 2),
@@ -342,7 +583,7 @@ function buildProjectRoutes(prisma) {
         const projectID = BigInt(req.params.projectId);
         const questionnaireID = BigInt(req.params.questionnaireId);
         const testerUserID = BigInt(req.user.sub);
-        const { answers } = req.body;
+        const { answers, questionnaireResponseID } = req.body;
 
         if (!Array.isArray(answers)) {
           return res.status(400).json({ error: "answers must be an array" });
@@ -394,15 +635,28 @@ function buildProjectRoutes(prisma) {
             .json({ error: "Questionnaire is not available" });
         }
 
-        const existing = await prisma.questionnaireResponse.findFirst({
+        // prevent duplicate completed submissions
+        const alreadySubmitted = await prisma.questionnaireResponse.findFirst({
           where: {
             questionnaireID,
             testerUserID,
+            responseStatusID: 2,
           },
         });
-        if (existing) {
+        if (alreadySubmitted) {
           return res.status(409).json({ error: "Already submitted" });
         }
+
+        // if client provided an existing in-progress response id, use it to submit
+        const useExistingResponse = questionnaireResponseID
+          ? (() => {
+              try {
+                return BigInt(questionnaireResponseID);
+              } catch {
+                return null;
+              }
+            })()
+          : null;
 
         const answerLookup = new Map();
         answers.forEach((answer) => {
@@ -411,19 +665,38 @@ function buildProjectRoutes(prisma) {
         });
 
         const now = new Date();
-        const response = await prisma.$transaction(async (tx) => {
-          const createdResponse = await tx.questionnaireResponse.create({
-            data: {
-              questionnaireID,
-              testerUserID,
-              responseStatusID: 2,
-              startedAt: now,
-              submittedAt: now,
-              ipAddress: req.ip,
-              userAgent: req.get("user-agent"),
-            },
-          });
 
+        const response = await prisma.$transaction(async (tx) => {
+          let responseRecord = null;
+
+          if (useExistingResponse) {
+            // validate existing response
+            responseRecord = await tx.questionnaireResponse.findUnique({
+              where: { questionnaireResponseID: useExistingResponse },
+            });
+            if (!responseRecord)
+              throw new Error("Questionnaire response not found");
+            if (responseRecord.testerUserID !== testerUserID)
+              throw new Error("Forbidden");
+            if (Number(responseRecord.responseStatusID) === 2)
+              throw new Error("Already submitted");
+            // do not overwrite startedAt
+          } else {
+            // create-and-submit (fallback / existing behavior)
+            responseRecord = await tx.questionnaireResponse.create({
+              data: {
+                questionnaireID,
+                testerUserID,
+                responseStatusID: 2,
+                startedAt: now,
+                submittedAt: now,
+                ipAddress: req.ip,
+                userAgent: req.get("user-agent"),
+              },
+            });
+          }
+
+          // if using existing response we will insert answers and then update submittedAt below
           for (const question of questionnaire.questions) {
             const incoming = answerLookup.get(question.questionID.toString());
             const typeCode = question.questionType?.typeCode;
@@ -482,7 +755,7 @@ function buildProjectRoutes(prisma) {
               answerPayload = { answerDate: new Date(incoming.answerDate) };
             } else if (typeCode === "SINGLE_CHOICE") {
               const selected = incoming.selectedOptionID;
-              if (!selected) {
+              if (selected === undefined || selected === null) {
                 if (question.isRequired) {
                   throw new Error(
                     `Missing required answer for question ${question.questionID}`,
@@ -540,8 +813,7 @@ function buildProjectRoutes(prisma) {
 
             const createdAnswer = await tx.questionAnswer.create({
               data: {
-                questionnaireResponseID:
-                  createdResponse.questionnaireResponseID,
+                questionnaireResponseID: responseRecord.questionnaireResponseID,
                 questionID: question.questionID,
                 ...answerPayload,
               },
@@ -557,12 +829,118 @@ function buildProjectRoutes(prisma) {
             }
           }
 
-          return createdResponse;
+          const pointsToAward = Number(questionnaire.pointsReward ?? 0);
+          if (pointsToAward > 0) {
+            let ptType = await tx.pointTransactionType.findUnique({
+              where: { typeCode: "QUESTIONNAIRE_REWARD" },
+            });
+            if (!ptType) ptType = await tx.pointTransactionType.findFirst();
+            const ptTypeId = ptType ? ptType.pointTransactionTypeID : 1;
+            await tx.pointTransaction.create({
+              data: {
+                userID: testerUserID,
+                pointTransactionTypeID: ptTypeId,
+                pointsDelta: pointsToAward,
+                questionnaireResponseID: responseRecord.questionnaireResponseID,
+                description: `Reward for questionnaire ${questionnaire.questionnaireID}`,
+              },
+            });
+
+            await tx.userPointBalance.upsert({
+              where: { userID: testerUserID },
+              update: {
+                currentPoints: { increment: pointsToAward },
+                lifetimeEarnedPoints: { increment: pointsToAward },
+              },
+              create: {
+                userID: testerUserID,
+                currentPoints: pointsToAward,
+                lifetimeEarnedPoints: pointsToAward,
+                lifetimeSpentPoints: 0,
+              },
+            });
+          }
+
+          // if we used an existing in-progress response, update submittedAt/status now
+          if (useExistingResponse) {
+            const updated = await tx.questionnaireResponse.update({
+              where: {
+                questionnaireResponseID: responseRecord.questionnaireResponseID,
+              },
+              data: { submittedAt: now, responseStatusID: 2 },
+            });
+            return updated;
+          }
+
+          return responseRecord;
         });
 
         return res.status(201).json({ item: response });
       } catch (err) {
+        const msg = err?.message || "";
+        if (
+          msg.startsWith("Missing required answer") ||
+          msg.startsWith("Invalid option") ||
+          msg === "Already submitted" ||
+          msg === "Questionnaire response not found" ||
+          msg === "Forbidden"
+        ) {
+          return res.status(400).json({ error: msg });
+        }
         return next(err);
+      }
+    },
+  );
+
+  router.post(
+    "/questionnaire-responses",
+    requireRole(1, 2),
+    async (req, res, next) => {
+      try {
+        if (!req.user || !req.user.sub) {
+          console.error(
+            "Unauthorized: req.user missing on /questionnaire-responses",
+            req.user,
+          );
+          return res.status(401).json({ error: "Unauthorized" });
+        }
+        console.log(
+          "POST /questionnaire-responses body:",
+          req.body,
+          "user:",
+          req.user?.sub,
+        );
+        const testerUserID = BigInt(req.user.sub);
+        const { projectID, questionnaireID } = req.body;
+        if (!questionnaireID) {
+          return res.status(400).json({ error: "questionnaireID required" });
+        }
+        let qid;
+        try {
+          qid = BigInt(questionnaireID);
+        } catch (e) {
+          return res.status(400).json({ error: "invalid questionnaireID" });
+        }
+
+        const created = await prisma.questionnaireResponse.create({
+          data: {
+            testerUserID,
+            questionnaireID: qid,
+            // projectID removed because the Prisma model doesn't accept it
+            startedAt: new Date(),
+            responseStatusID: 1, // in-progress
+            ipAddress: req.ip,
+            userAgent: req.get("user-agent"),
+          },
+        });
+
+        res.status(201).json({
+          id: created.questionnaireResponseID.toString(),
+          startedAt: created.startedAt,
+        });
+      } catch (err) {
+        console.error("POST /questionnaire-responses error:", err);
+        next(err);
       }
     },
   );
@@ -867,6 +1245,180 @@ function buildProjectRoutes(prisma) {
         return res.json({ item: updated });
       } catch (err) {
         return next(err);
+      }
+    },
+  );
+
+  router.get(
+    "/project-memberships/me",
+    requireRole(1, 2),
+    async (req, res, next) => {
+      try {
+        const testerUserID = BigInt(req.user.sub);
+        const memberships = await prisma.projectMembership.findMany({
+          where: { testerUserID },
+          orderBy: { joinedAt: "desc" },
+          include: {
+            project: {
+              select: { projectID: true, title: true, projectImageUrl: true },
+            },
+          },
+        });
+        const items = memberships.map((m) => ({
+          id: m.project?.projectID?.toString() ?? m.projectID?.toString(),
+          joinedAt: m.joinedAt,
+          project: m.project
+            ? {
+                id: m.project.projectID.toString(),
+                title: m.project.title,
+                projectImageUrl: m.project.projectImageUrl || null,
+              }
+            : null,
+        }));
+        return res.json({ items });
+      } catch (err) {
+        return next(err);
+      }
+    },
+  );
+
+  // Return user point balance for the current user
+  router.get(
+    "/user-point-balance/me",
+    requireRole(1, 2),
+    async (req, res, next) => {
+      try {
+        const userID = BigInt(req.user.sub);
+        const balance = await prisma.userPointBalance.findUnique({
+          where: { userID },
+          select: {
+            userID: true,
+            currentPoints: true,
+            lifetimeEarnedPoints: true,
+            lifetimeSpentPoints: true,
+          },
+        });
+        if (!balance) return res.status(404).json({ error: "Not found" });
+        return res.json({ item: balance });
+      } catch (err) {
+        return next(err);
+      }
+    },
+  );
+
+  // router.get(
+  //   "/questionnaire-responses/me",
+  //   requireRole(1, 2),
+  //   async (req, res, next) => {
+  //     try {
+  //       const testerUserID = BigInt(req.user.sub);
+  //       const responses = await prisma.questionnaireResponse.findMany({
+  //         where: { testerUserID, responseStatusID: 2 }, // submitted responses
+  //         orderBy: { submittedAt: "desc" },
+  //         include: {
+  //           questionnaire: {
+  //             select: {
+  //               questionnaireID: true,
+  //               title: true,
+  //               pointsReward: true,
+  //               project: {
+  //                 select: {
+  //                   projectID: true,
+  //                   title: true,
+  //                   projectImageUrl: true,
+  //                 },
+  //               },
+  //             },
+  //           },
+  //         },
+  //       });
+
+  //       const items = responses.map((r) => ({
+  //         id: r.questionnaireResponseID.toString(),
+  //         startedAt: r.startedAt,
+  //         submittedAt: r.submittedAt,
+  //         pointsReward: r.questionnaire?.pointsReward ?? 0,
+  //         questionnaire: r.questionnaire
+  //           ? {
+  //               id: r.questionnaire.questionnaireID.toString(),
+  //               title: r.questionnaire.title,
+  //               pointsReward: r.questionnaire.pointsReward ?? 0,
+  //             }
+  //           : null,
+  //         project: r.questionnaire?.project
+  //           ? {
+  //               id: r.questionnaire.project.projectID.toString(),
+  //               title: r.questionnaire.project.title,
+  //               projectImageUrl:
+  //                 r.questionnaire.project.projectImageUrl || null,
+  //             }
+  //           : null,
+  //       }));
+
+  //       res.json({ items });
+  //     } catch (err) {
+  //       next(err);
+  //     }
+  //   },
+  // );
+
+  router.get(
+    "/questionnaire-responses/me",
+    requireRole(1, 2),
+    async (req, res, next) => {
+      try {
+        const testerUserID = BigInt(req.user.sub);
+        const statusFilter = req.query.status === "all" ? undefined : 2; // default keep existing behavior
+        const where = statusFilter
+          ? { testerUserID, responseStatusID: statusFilter }
+          : { testerUserID };
+        const responses = await prisma.questionnaireResponse.findMany({
+          where,
+          orderBy: { submittedAt: "desc" },
+          include: {
+            questionnaire: {
+              select: {
+                questionnaireID: true,
+                title: true,
+                pointsReward: true,
+                project: {
+                  select: {
+                    projectID: true,
+                    title: true,
+                    projectImageUrl: true,
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        const items = responses.map((r) => ({
+          id: r.questionnaireResponseID.toString(),
+          startedAt: r.startedAt,
+          submittedAt: r.submittedAt,
+          pointsReward: r.questionnaire?.pointsReward ?? 0,
+          questionnaire: r.questionnaire
+            ? {
+                id: r.questionnaire.questionnaireID.toString(),
+                title: r.questionnaire.title,
+                pointsReward: r.questionnaire.pointsReward ?? 0,
+              }
+            : null,
+          project: r.questionnaire?.project
+            ? {
+                id: r.questionnaire.project.projectID.toString(),
+                title: r.questionnaire.project.title,
+                projectImageUrl:
+                  r.questionnaire.project.projectImageUrl || null,
+              }
+            : null,
+          responseStatusID: Number(r.responseStatusID),
+        }));
+
+        res.json({ items });
+      } catch (err) {
+        next(err);
       }
     },
   );

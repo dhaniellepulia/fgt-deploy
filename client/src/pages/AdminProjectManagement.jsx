@@ -12,6 +12,7 @@ import {
   updateClientProject,
   deleteClientProject,
 } from "../api/clientProjects";
+import { uploadProjectImage } from "../api/clientProjects";
 import {
   createQuestionnaire,
   updateQuestionnaire,
@@ -48,7 +49,16 @@ export default function AdminProjectManagement() {
   const [direction, setDirection] = useState("asc");
   const [selectedProject, setSelectedProject] = useState(null);
   const [editProject, setEditProject] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imagePreview, setImagePreview] = useState(null);
 
+  useEffect(() => {
+    if (selectedProject?.projectImageUrl) {
+      const base = import.meta.env.VITE_API_URL || "http://localhost:4000";
+      const url = String(selectedProject.projectImageUrl || "");
+      setImagePreview(url.startsWith("/") ? `${base}${url}` : url);
+    } else setImagePreview(null);
+  }, [selectedProject]);
   const [showAddProject, setShowAddProject] = useState(false);
   const [newProjectTitle, setNewProjectTitle] = useState("");
   const [newProjectClient, setNewProjectClient] = useState("");
@@ -188,6 +198,78 @@ export default function AdminProjectManagement() {
       } else {
         setEditingQuestionnaireId(null);
       }
+    }
+  };
+
+  const onImageSelected = async (e) => {
+    const f = e?.target?.files?.[0];
+    console.log("selected file", f);
+    if (!f || !editProject || !token) return;
+
+    const localUrl = URL.createObjectURL(f);
+    setImagePreview(localUrl);
+    setUploadingImage(true);
+    try {
+      const res = await uploadProjectImage(editProject.projectID, token, f);
+      console.log("upload response", res);
+      const updated = res?.item || res || null;
+      if (updated?.projectImageUrl) {
+        const base = import.meta.env.VITE_API_URL || "http://localhost:4000";
+        const url = String(updated.projectImageUrl || "");
+        const absolute = url.startsWith("/") ? `${base}${url}` : url;
+
+        // update preview and all relevant state so UI doesn't revert
+        setImagePreview(absolute);
+        setEditProject((p) => ({
+          ...(p || {}),
+          projectImageUrl: updated.projectImageUrl,
+        }));
+        setSelectedProject(updated); // IMPORTANT: keep selectedProject in sync
+        setProjects((prev) =>
+          Array.isArray(prev)
+            ? prev.map((pp) =>
+                pp.projectID === updated.projectID ? updated : pp,
+              )
+            : prev,
+        );
+
+        // revoke the local object URL to free memory
+        URL.revokeObjectURL(localUrl);
+      }
+    } catch (err) {
+      console.error("Image upload failed", err);
+      alert("Image upload failed");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const updateQuestionnaireStatus = async (q, newStatusID) => {
+    if (!token) return;
+    try {
+      const payload = { ...q, statusID: Number(newStatusID) };
+      if (Number(newStatusID) === 2 && !payload.publishedAt)
+        payload.publishedAt = new Date().toISOString();
+      if (Number(newStatusID) !== 2) payload.publishedAt = null;
+      await updateQuestionnaire(q.questionnaireID ?? q.id, token, payload);
+      if (editProject?.projectID) {
+        const pr = await fetchClientProjectById(editProject.projectID, token);
+        const refreshed = pr?.item || pr?.project || pr || null;
+        if (refreshed) {
+          setSelectedProject(refreshed);
+          setEditProject(refreshed);
+          setProjects((prev) =>
+            Array.isArray(prev)
+              ? prev.map((p) =>
+                  p.projectID === refreshed.projectID ? refreshed : p,
+                )
+              : prev,
+          );
+        }
+      }
+    } catch (err) {
+      console.error("Failed to update questionnaire status", err);
+      alert("Failed to update status");
     }
   };
 
@@ -911,6 +993,39 @@ export default function AdminProjectManagement() {
 
                 <div className="mb-4">
                   <label className="text-xs text-neutral-400">
+                    Project Image
+                  </label>
+                  <div className="mt-2 flex items-center gap-4">
+                    <div className="w-28 h-28 bg-[#111] border border-gray-700 rounded overflow-hidden flex items-center justify-center">
+                      {imagePreview ? (
+                        <img
+                          src={imagePreview}
+                          alt="project"
+                          className="object-cover w-full h-full"
+                        />
+                      ) : (
+                        <div className="text-xs text-gray-500">No image</div>
+                      )}
+                    </div>
+                    <div className="flex flex-col">
+                      <label className="cursor-pointer inline-flex items-center gap-2 bg-gradient-to-r from-[#4183E8] to-[#284CC4] text-white px-3 py-2 rounded text-sm">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={onImageSelected}
+                          className="hidden"
+                        />
+                        {uploadingImage ? "Uploading..." : "Upload / Change"}
+                      </label>
+                      <div className="text-xs text-neutral-400 mt-2">
+                        Recommended: 800×450, PNG/JPG.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <label className="text-xs text-neutral-400">
                     Description
                   </label>
                   <textarea
@@ -1071,6 +1186,22 @@ export default function AdminProjectManagement() {
                       Reward: {q.pointsReward} pts Responses:{" "}
                       {q.maxResponses ?? ""} Time limit:{" "}
                       {q.timeLimitSeconds ?? ""}s
+                    </div>
+                    <div className="mt-2 flex items-center gap-2">
+                      <select
+                        value={String(q.statusID ?? "")}
+                        onChange={(e) =>
+                          updateQuestionnaireStatus(q, e.target.value)
+                        }
+                        className="bg-[#2a2a2a] border border-gray-700 rounded p-2 text-sm text-gray-300"
+                      >
+                        <option value="1">Upcoming</option>
+                        <option value="2">Active</option>
+                        <option value="3">Past</option>
+                      </select>
+                      <div className="text-xs text-neutral-400">
+                        Change questionnaire status
+                      </div>
                     </div>
                   </div>
                 ))}

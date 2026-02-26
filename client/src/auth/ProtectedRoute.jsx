@@ -40,13 +40,16 @@ export default function ProtectedRoute({ children }) {
   const isClient = roleID === "3" || roleID === "1";
 
   const localOnboarding = user.onboarding || {};
+  const hasProfileCompleted = Boolean(
+    user.onboardingProfileCompleted || localOnboarding.profileCompleted,
+  );
+  const hasQuestionnaireCompleted = Boolean(
+    user.onboardingQuestionnaireCompleted ||
+      localOnboarding.questionnaireCompleted,
+  );
   const isOnboardingIncomplete = isClient
     ? !(user.onboardingClientCompleted || localOnboarding.clientCompleted)
-    : !(
-        (user.onboardingProfileCompleted || localOnboarding.profileCompleted) &&
-        (user.onboardingQuestionnaireCompleted ||
-          localOnboarding.questionnaireCompleted)
-      );
+    : !(hasProfileCompleted && hasQuestionnaireCompleted);
 
   const isCurrentlyOnboarding = location.pathname.startsWith("/onboarding");
   const isClientOnboarding = location.pathname.startsWith("/onboarding/client");
@@ -60,9 +63,30 @@ export default function ProtectedRoute({ children }) {
     return <Navigate to="/onboarding" replace />;
   }
 
+  if (!isClient && isPlaytesterOnboarding) {
+    if (hasProfileCompleted && !hasQuestionnaireCompleted) {
+      if (location.pathname !== "/onboarding/questionnaire") {
+        return <Navigate to="/onboarding/questionnaire" replace />;
+      }
+    } else if (!hasProfileCompleted) {
+      if (location.pathname === "/onboarding/questionnaire") {
+        return <Navigate to="/onboarding/additional-info" replace />;
+      }
+    }
+  }
+
   if (isOnboardingIncomplete && !isCurrentlyOnboarding) {
     return (
-      <Navigate to={isClient ? "/onboarding/client" : "/onboarding"} replace />
+      <Navigate
+        to={
+          isClient
+            ? "/onboarding/client"
+            : hasProfileCompleted && !hasQuestionnaireCompleted
+              ? "/onboarding/questionnaire"
+              : "/onboarding"
+        }
+        replace
+      />
     );
   }
 

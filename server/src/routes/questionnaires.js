@@ -1,5 +1,5 @@
 const express = require("express");
-const { requireRole } = require("../middleware/auth");
+const { requireRole, requireAuth } = require("../middleware/auth");
 
 function buildQuestionnaireRoutes(prisma) {
   const router = express.Router();
@@ -539,6 +539,61 @@ function buildQuestionnaireRoutes(prisma) {
       }
     },
   );
+
+  router.get("/user-motivations/me", requireAuth, async (req, res, next) => {
+    try {
+      const userID = BigInt(req.user.sub);
+      const user = await prisma.user.findUnique({
+        where: { userID },
+        select: { motivations: true },
+      });
+      return res.json({ items: user?.motivations ?? [] });
+    } catch (err) {
+      return next(err);
+    }
+  });
+
+  router.put("/user-motivations/me", requireAuth, async (req, res, next) => {
+    try {
+      const userID = BigInt(req.user.sub);
+      const keys = Array.isArray(req.body.keys) ? req.body.keys : undefined;
+      const preferences =
+        req.body.preferences === undefined ? undefined : req.body.preferences;
+      const gamerProfileBody =
+        req.body.gamerProfile === undefined ? undefined : req.body.gamerProfile;
+
+      const updateData = {};
+      if (keys !== undefined) updateData.motivations = keys;
+      // prefer explicitly provided gamerProfile, otherwise build from preferences (includes gamerType)
+      if (gamerProfileBody !== undefined) {
+        updateData.gamerProfile = gamerProfileBody;
+      } else if (preferences !== undefined) {
+        updateData.gamerProfile = {
+          gamerType: preferences.gamerType ?? null,
+          computedAt: new Date().toISOString(),
+          details: preferences,
+        };
+      }
+
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ error: "nothing to update" });
+      }
+
+      const updated = await prisma.user.update({
+        where: { userID },
+        data: updateData,
+        select: { motivations: true, gamerProfile: true },
+      });
+      return res.json({
+        item: {
+          motivations: updated.motivations ?? [],
+          gamerProfile: updated.gamerProfile ?? null,
+        },
+      });
+    } catch (err) {
+      return next(err);
+    }
+  });
 
   return router;
 }

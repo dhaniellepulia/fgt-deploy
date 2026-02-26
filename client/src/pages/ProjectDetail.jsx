@@ -4,6 +4,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import TopBar from "../components/layouts/TopBar.jsx";
 import { fetchProjectById, joinProject } from "../api/projects";
 import { useAuth } from "../auth/AuthContext";
+import OverlayModal from "../components/OverlayModal.jsx";
+import { startQuestionnaireResponse } from "../api/questionnaires.js";
 
 function ProjectDetail() {
   const { id } = useParams();
@@ -14,6 +16,15 @@ function ProjectDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [joining, setJoining] = useState(false);
+  const [showQuestionnairesModal, setShowQuestionnairesModal] = useState(false);
+  const [responsesMap, setResponsesMap] = useState({});
+
+  const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+  const imageSrc = useMemo(() => {
+    if (!project) return null;
+    const url = project.projectImageUrl || project.imageUrl || "";
+    return url ? (url.startsWith("/") ? `${API_BASE}${url}` : url) : null;
+  }, [project]);
 
   useEffect(() => {
     let mounted = true;
@@ -45,6 +56,42 @@ function ProjectDetail() {
       mounted = false;
     };
   }, [id, token]);
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadResponses() {
+      if (!token) return;
+      try {
+        const headers = {};
+        if (token) headers.Authorization = `Bearer ${token}`;
+        const res = await fetch(`${API_BASE}/questionnaire-responses/me`, {
+          headers,
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        if (!mounted) return;
+        const items = Array.isArray(data.items)
+          ? data.items
+          : data.items
+            ? [data.items]
+            : [];
+        const map = {};
+        items.forEach((r) => {
+          const qid =
+            r?.questionnaire?.id ?? r?.questionnaire?.questionnaireID ?? null;
+          if (qid != null) map[String(qid)] = r;
+        });
+        setResponsesMap(map);
+      } catch (err) {
+        // ignore; durations will fallback to project.questionnaires values
+        console.debug("failed to load questionnaire responses", err);
+      }
+    }
+    loadResponses();
+    return () => {
+      mounted = false;
+    };
+  }, [token]);
 
   const details = useMemo(() => {
     if (!project) return [];
@@ -81,12 +128,23 @@ function ProjectDetail() {
     }
   };
 
-  const scrollToQuestionnaires = () => {
-    const section = document.getElementById("questionnaires");
-    if (section) {
-      section.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  };
+  function fmtDurationWithSeconds(start, end) {
+    if (!start) return null;
+    const s = new Date(start).getTime();
+    const e = end ? new Date(end).getTime() : Date.now();
+    if (isNaN(s) || isNaN(e)) return null;
+    const diffSec = Math.max(0, Math.floor((e - s) / 1000));
+    const mins = Math.floor(diffSec / 60);
+    const secs = diffSec % 60;
+    return `${mins}m ${secs}s`;
+  }
+
+  // const scrollToQuestionnaires = () => {
+  //   const section = document.getElementById("questionnaires");
+  //   if (section) {
+  //     section.scrollIntoView({ behavior: "smooth", block: "start" });
+  //   }
+  // };
 
   if (loading) {
     return (
@@ -156,65 +214,6 @@ function ProjectDetail() {
                 ))}
               </div>
             </section>
-
-            <section id="questionnaires">
-              <h2 className="text-xl font-bold text-white mb-6">
-                Available Questionnaires
-              </h2>
-              {!project.isJoined ? (
-                <div className="border border-gray-600 rounded-md p-6 text-sm text-gray-300">
-                  Apply to join this project to access its published
-                  questionnaires.
-                </div>
-              ) : project.questionnaires?.length ? (
-                <div className="space-y-4">
-                  {project.questionnaires.map((questionnaire) => (
-                    <div
-                      key={questionnaire.id}
-                      className="border border-gray-700 rounded-lg p-4 bg-[#1e1e1e]"
-                    >
-                      <div className="flex items-center justify-between gap-4">
-                        <div>
-                          <h4 className="text-white font-semibold">
-                            {questionnaire.title}
-                          </h4>
-                          <p className="text-xs text-gray-400 mt-1">
-                            {questionnaire.description || "No description."}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() =>
-                            navigate(
-                              `/projects/${id}/questionnaires/${questionnaire.id}`
-                            )
-                          }
-                          disabled={questionnaire.hasSubmitted}
-                          className="bg-[#F9B71E] text-black text-xs font-semibold px-4 py-2 rounded disabled:opacity-60"
-                        >
-                          {questionnaire.hasSubmitted
-                            ? "Completed"
-                            : "Start"}
-                        </button>
-                      </div>
-                      <div className="flex flex-wrap gap-4 text-xs text-gray-400 mt-3">
-                        <span>
-                          Duration:{" "}
-                          {questionnaire.durationMinutes
-                            ? `${questionnaire.durationMinutes} min`
-                            : "N/A"}
-                        </span>
-                        <span>Points: {questionnaire.pointsReward ?? 0}</span>
-                        <span>Status: {questionnaire.status}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="border border-gray-600 rounded-md p-6 text-sm text-gray-300">
-                  No published questionnaires are available yet.
-                </div>
-              )}
-            </section>
           </div>
         </div>
 
@@ -224,16 +223,23 @@ function ProjectDetail() {
             {project.title}
           </h3>
 
-          {/* Placeholder for Image */}
-          <div className="aspect-square bg-[#333333] border border-gray-700 rounded-lg flex items-center justify-center mb-4 overflow-hidden relative">
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-full h-px bg-gray-600 rotate-45"></div>
-              <div className="w-full h-px bg-gray-600 -rotate-45"></div>
-            </div>
-          </div>
-
-          <div className="text-xs text-orange-400 mb-6 flex items-center gap-2">
-            <span>Status {project.status || "N/A"}</span>
+          <div
+            className="bg-[#333333] border border-gray-700 rounded-lg flex items-center justify-center mb-4 overflow-hidden relative w-full"
+            style={{ aspectRatio: "2 / 3" }}
+          >
+            {imageSrc ? (
+              <img
+                src={imageSrc}
+                alt={project.title || "project image"}
+                className="object-cover w-full h-full"
+                onError={(e) => {
+                  console.error("Project image failed to load:", imageSrc);
+                  e.currentTarget.style.display = "none";
+                }}
+              />
+            ) : (
+              <div className="text-neutral-500 text-sm">No image</div>
+            )}
           </div>
 
           <div className="text-sm leading-relaxed text-gray-400 mb-6">
@@ -250,7 +256,7 @@ function ProjectDetail() {
             </button>
           ) : (
             <button
-              onClick={scrollToQuestionnaires}
+              onClick={() => setShowQuestionnairesModal(true)}
               className="mt-auto w-full bg-[#4c28a5] hover:bg-[#5d35c2] text-white py-4 rounded-2xl font-bold text-lg transition-colors shadow-lg"
             >
               View Questionnaires
@@ -258,6 +264,94 @@ function ProjectDetail() {
           )}
         </div>
       </div>
+      <OverlayModal
+        isOpen={showQuestionnairesModal}
+        onClose={() => setShowQuestionnairesModal(false)}
+        title="Available Questionnaires"
+      >
+        <div className="space-y-4">
+          {!project.isJoined ? (
+            <div className="border border-gray-600 rounded-md p-6 text-sm text-gray-300">
+              Apply to join this project to access its published questionnaires.
+            </div>
+          ) : project.questionnaires?.length ? (
+            <div className="space-y-4">
+              {project.questionnaires.map((questionnaire) => {
+                const qid = questionnaire.id ?? questionnaire.questionnaireID;
+                const resp = responsesMap[String(qid)];
+                return (
+                  <div
+                    key={String(qid)}
+                    className="border border-gray-700 rounded-lg p-4 bg-[#1e1e1e]"
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <h4 className="text-white font-semibold">
+                          {questionnaire.title}
+                        </h4>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {questionnaire.description || "No description."}
+                        </p>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          try {
+                            const started = await startQuestionnaireResponse(
+                              project.projectID ?? project.id ?? id,
+                              qid,
+                              token,
+                            );
+                            navigate(`/projects/${id}/questionnaires/${qid}`, {
+                              state: {
+                                questionnaireResponseID: started.id,
+                                startedAt: started.startedAt,
+                              },
+                            });
+                            setShowQuestionnairesModal(false);
+                          } catch (err) {
+                            console.error("Failed to start questionnaire", err);
+                            alert(
+                              err?.message || "Failed to start questionnaire",
+                            );
+                          }
+                        }}
+                        disabled={questionnaire.hasSubmitted}
+                        className="bg-[#F9B71E] text-black text-xs font-semibold px-4 py-2 rounded disabled:opacity-60"
+                      >
+                        {questionnaire.hasSubmitted ? "Completed" : "Start"}
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-4 text-xs text-gray-400 mt-3">
+                      <span>
+                        Duration:{" "}
+                        {resp?.startedAt
+                          ? fmtDurationWithSeconds(
+                              resp.startedAt,
+                              resp.submittedAt,
+                            )
+                          : questionnaire.startedAt
+                            ? fmtDurationWithSeconds(
+                                questionnaire.startedAt,
+                                questionnaire.submittedAt,
+                              )
+                            : questionnaire.durationMinutes
+                              ? `${questionnaire.durationMinutes} min`
+                              : "N/A"}
+                      </span>
+                      <span>Points: {questionnaire.pointsReward ?? 0}</span>
+                      <span>Status: {questionnaire.status}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="border border-gray-600 rounded-md p-6 text-sm text-gray-300">
+              No published questionnaires are available yet.
+            </div>
+          )}
+        </div>
+      </OverlayModal>
     </div>
   );
 }

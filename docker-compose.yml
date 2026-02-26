@@ -11,6 +11,7 @@ services:
       - "5432:5432"
     volumes:
       - fgt_postgres_data:/var/lib/postgresql/data
+      - ./server/uploads:/usr/src/app/uploads
 
   server:
     build:
@@ -30,6 +31,8 @@ services:
       - postgres
     ports:
       - "4000:4000"
+    volumes:
+      - ./server/uploads:/app/uploads
 
 volumes:
   fgt_postgres_data:

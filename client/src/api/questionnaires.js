@@ -80,3 +80,48 @@ export async function deleteQuestionOption(optionID, token) {
     headers: authHeaders(token),
   });
 }
+
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+
+export async function startQuestionnaireResponse(
+  projectID,
+  questionnaireID,
+  token,
+) {
+  const res = await fetch(`${API_BASE}/questionnaire-responses`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ projectID, questionnaireID }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json(); // { id, startedAt }
+}
+export async function submitQuestionnaireResponse(
+  projectId,
+  questionnaireId,
+  token,
+  payload = {},
+  questionnaireResponseID = null,
+) {
+  const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+  const body = { ...payload };
+  if (questionnaireResponseID)
+    body.questionnaireResponseID = questionnaireResponseID;
+
+  const res = await fetch(
+    `${API_BASE}/projects/${projectId}/questionnaires/${questionnaireId}/responses`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(body),
+    },
+  );
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}

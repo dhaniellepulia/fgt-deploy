@@ -47,7 +47,7 @@ const experienceLevels = ["Beginner", "Intermediate", "Pro"];
 
 function AdditionalInformation() {
   const navigate = useNavigate();
-  const { updateUser, completeOnboardingStep, token } = useAuth();
+  const { updateUser, completeOnboardingStep, token, user } = useAuth();
   const [genres, setGenres] = useState([]);
   const [games, setGames] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -79,6 +79,25 @@ function AdditionalInformation() {
       .then((res) => setGames(res.items || []))
       .catch(() => setGames([]));
   }, [token]);
+
+  useEffect(() => {
+    const localOnboarding = user?.onboarding || {};
+    const hasProfileCompleted = Boolean(
+      user?.onboardingProfileCompleted || localOnboarding.profileCompleted,
+    );
+    const hasQuestionnaireCompleted = Boolean(
+      user?.onboardingQuestionnaireCompleted ||
+        localOnboarding.questionnaireCompleted,
+    );
+
+    if (hasQuestionnaireCompleted) {
+      navigate("/dashboard", { replace: true });
+      return;
+    }
+    if (hasProfileCompleted) {
+      navigate("/onboarding/questionnaire", { replace: true });
+    }
+  }, [navigate, user]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

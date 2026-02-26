@@ -14,7 +14,20 @@ const {
 
 const app = express();
 const prisma = new PrismaClient();
+const path = require("path");
+app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 
+// explicit public route to serve project files (avoid auth middleware)
+app.get("/uploads/projects/:file", (req, res) => {
+  const file = req.params.file;
+  const filePath = path.join(__dirname, "..", "uploads", "projects", file);
+  return res.sendFile(filePath, (err) => {
+    if (err) {
+      console.error("sendFile error:", err);
+      res.status(err.status || 500).end();
+    }
+  });
+});
 const PORT = process.env.PORT || 4000;
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
 const DEFAULT_ROLE_ID = BigInt(process.env.DEFAULT_ROLE_ID || 2); // 2 = tester (seeded)
@@ -29,6 +42,9 @@ const ACTIVE_USER_STATUS_ID = Number(process.env.ACTIVE_USER_STATUS_ID || 1);
 
 app.use(cors());
 app.use(express.json());
+
+const adminProjectsImage = require("./routes/admin/adminProjectsImage");
+app.use("/admin/projects", adminProjectsImage);
 
 app.set("json replacer", (key, value) =>
   typeof value === "bigint" ? value.toString() : value,
@@ -84,6 +100,8 @@ app.post("/auth/register", async (req, res) => {
       spokenLanguages: true,
       experienceLevel: true,
       recentGameID: true,
+      motivations: true,
+      gamerProfile: true,
     },
   });
   //added code:
@@ -149,6 +167,8 @@ app.post("/auth/login", async (req, res) => {
       spokenLanguages: user.spokenLanguages,
       experienceLevel: user.experienceLevel,
       recentGameID: user.recentGameID,
+      motivations: user.motivations,
+      gamerProfile: user.gamerProfile,
     },
   });
 });
@@ -166,6 +186,11 @@ app.get("/auth/me", requireAuth, async (req, res) => {
       onboardingProfileCompleted: true,
       onboardingQuestionnaireCompleted: true,
       onboardingClientCompleted: true,
+      motivations: true,
+      gamerProfile: true,
+      isEmailVerified: true,
+      emailVerifiedAt: true,
+      createdAt: true,
       firstName: true,
       lastName: true,
       phoneNumber: true,

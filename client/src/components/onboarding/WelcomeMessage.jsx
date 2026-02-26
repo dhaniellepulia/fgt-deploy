@@ -1,5 +1,5 @@
 //page for Onboarding > Welcome Message
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
 
@@ -28,9 +28,28 @@ const slides = [
 
 function WelcomeMessage() {
   const navigate = useNavigate();
-  const { completeOnboardingStep } = useAuth();
+  const { completeOnboardingStep, user } = useAuth();
 
   const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    const localOnboarding = user?.onboarding || {};
+    const hasProfileCompleted = Boolean(
+      user?.onboardingProfileCompleted || localOnboarding.profileCompleted,
+    );
+    const hasQuestionnaireCompleted = Boolean(
+      user?.onboardingQuestionnaireCompleted ||
+        localOnboarding.questionnaireCompleted,
+    );
+
+    if (hasQuestionnaireCompleted) {
+      navigate("/dashboard", { replace: true });
+      return;
+    }
+    if (hasProfileCompleted) {
+      navigate("/onboarding/questionnaire", { replace: true });
+    }
+  }, [navigate, user]);
 
   const handleNext = () => {
     setCurrentIndex((prev) => (prev + 1) % slides.length);
