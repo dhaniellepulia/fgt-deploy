@@ -1,6 +1,7 @@
 const { PrismaClient } = require("@prisma/client");
 const fs = require("fs");
 const path = require("path");
+const bcrypt = require("bcryptjs");
 
 const prisma = new PrismaClient();
 
@@ -360,6 +361,37 @@ async function main() {
       },
     });
   }
+
+  // initial community + invite code for playtester feature testing
+  const initialCommunity = await prisma.community.upsert({
+    where: { name: "PNE Test Community" },
+    update: {
+      description: "Initial community for invite-code join flow testing.",
+      isActive: true,
+    },
+    create: {
+      name: "PNE Test Community",
+      description: "Initial community for invite-code join flow testing.",
+      isActive: true,
+    },
+  });
+
+  await prisma.communityInviteCode.upsert({
+    where: { code: "PLAYTESTER-TEST-CODE" },
+    update: {
+      communityID: initialCommunity.communityID,
+      isActive: true,
+      expiresAt: null,
+      maxUses: null,
+    },
+    create: {
+      communityID: initialCommunity.communityID,
+      code: "PLAYTESTER-TEST-CODE",
+      isActive: true,
+      expiresAt: null,
+      maxUses: null,
+    },
+  });
 }
 
 main()

@@ -1,6 +1,38 @@
 const express = require("express");
 const { requireRole } = require("../middleware/auth");
 
+const XP_AWARDS = {
+  joinedProject: 5,
+  submittedSession: 12,
+  firstSessionBonus: 8,
+};
+
+function getXpNeededForLevel(level) {
+  return 50 + (level - 1) * 25;
+}
+
+function computeLevelFromXp(totalXp = 0) {
+  let level = 1;
+  let xpIntoLevel = Math.max(0, Number(totalXp) || 0);
+  let xpNeededForNextLevel = getXpNeededForLevel(level);
+
+  while (xpIntoLevel >= xpNeededForNextLevel) {
+    xpIntoLevel -= xpNeededForNextLevel;
+    level += 1;
+    xpNeededForNextLevel = getXpNeededForLevel(level);
+  }
+
+  return {
+    totalXp: Math.max(0, Number(totalXp) || 0),
+    currentLevel: level,
+    nextLevel: level + 1,
+    xpIntoLevel,
+    xpNeededForNextLevel,
+    progressPct:
+      xpNeededForNextLevel > 0 ? (xpIntoLevel / xpNeededForNextLevel) * 100 : 0,
+  };
+}
+
 function getQuestionnaireAvailability(questionnaire, now = new Date()) {
   const startsAt = questionnaire.startsAt
     ? new Date(questionnaire.startsAt)
@@ -226,19 +258,33 @@ function buildProjectRoutes(prisma) {
         }
 
         const testerUserID = BigInt(req.user.sub);
-        const membership = await prisma.projectMembership.upsert({
+        const existingMembership = await prisma.projectMembership.findUnique({
           where: {
             projectID_testerUserID: {
               projectID,
               testerUserID,
             },
           },
-          update: {},
-          create: {
-            projectID,
-            testerUserID,
-            joinedAt: new Date(),
-          },
+        });
+        if (existingMembership) {
+          return res.json({ item: existingMembership });
+        }
+
+        const membership = await prisma.$transaction(async (tx) => {
+          const createdMembership = await tx.projectMembership.create({
+            data: {
+              projectID,
+              testerUserID,
+              joinedAt: new Date(),
+            },
+          });
+
+          await tx.user.update({
+            where: { userID: testerUserID },
+            data: { xpTotal: { increment: XP_AWARDS.joinedProject } },
+          });
+
+          return createdMembership;
         });
 
         return res.status(201).json({ item: membership });
@@ -647,6 +693,11 @@ function buildProjectRoutes(prisma) {
           return res.status(409).json({ error: "Already submitted" });
         }
 
+        const hasSubmittedBefore = await prisma.questionnaireResponse.findFirst({
+          where: { testerUserID, responseStatusID: 2 },
+          select: { questionnaireResponseID: true },
+        });
+
         // if client provided an existing in-progress response id, use it to submit
         const useExistingResponse = questionnaireResponseID
           ? (() => {
@@ -861,6 +912,16 @@ function buildProjectRoutes(prisma) {
             });
           }
 
+          const xpToAward =
+            XP_AWARDS.submittedSession +
+            (hasSubmittedBefore ? 0 : XP_AWARDS.firstSessionBonus);
+          if (xpToAward > 0) {
+            await tx.user.update({
+              where: { userID: testerUserID },
+              data: { xpTotal: { increment: xpToAward } },
+            });
+          }
+
           // if we used an existing in-progress response, update submittedAt/status now
           if (useExistingResponse) {
             const updated = await tx.questionnaireResponse.update({
@@ -961,6 +1022,7 @@ function buildProjectRoutes(prisma) {
             where: { deletedAt: null },
             select: {
               questionnaireID: true,
+              clientUserID: true,
               title: true,
               description: true,
               statusID: true,
@@ -1260,7 +1322,15 @@ function buildProjectRoutes(prisma) {
           orderBy: { joinedAt: "desc" },
           include: {
             project: {
-              select: { projectID: true, title: true, projectImageUrl: true },
+              select: {
+                projectID: true,
+                title: true,
+                projectImageUrl: true,
+                questionnaires: {
+                  where: { deletedAt: null, statusID: 2 },
+                  select: { pointsReward: true },
+                },
+              },
             },
           },
         });
@@ -1272,6 +1342,14 @@ function buildProjectRoutes(prisma) {
                 id: m.project.projectID.toString(),
                 title: m.project.title,
                 projectImageUrl: m.project.projectImageUrl || null,
+                pointsReward:
+                  m.project.questionnaires.length > 0
+                    ? Math.max(
+                        ...m.project.questionnaires.map(
+                          (q) => q.pointsReward ?? 0,
+                        ),
+                      )
+                    : 0,
               }
             : null,
         }));
@@ -1305,6 +1383,26 @@ function buildProjectRoutes(prisma) {
       }
     },
   );
+
+  router.get("/user-xp-balance/me", requireRole(1, 2), async (req, res, next) => {
+    try {
+      const userID = BigInt(req.user.sub);
+      const user = await prisma.user.findUnique({
+        where: { userID },
+        select: { userID: true, xpTotal: true },
+      });
+      if (!user) return res.status(404).json({ error: "Not found" });
+
+      return res.json({
+        item: {
+          userID: user.userID,
+          ...computeLevelFromXp(user.xpTotal ?? 0),
+        },
+      });
+    } catch (err) {
+      return next(err);
+    }
+  });
 
   // router.get(
   //   "/questionnaire-responses/me",

@@ -2,11 +2,14 @@ const express = require("express");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
+const multer = require("multer");
+const fs = require("fs");
 const { PrismaClient } = require("@prisma/client");
 require("dotenv").config();
 const { requireAuth } = require("./middleware/auth");
 const { buildQuestionnaireRoutes } = require("./routes/questionnaires");
 const { buildProjectRoutes } = require("./routes/projects");
+const { buildCommunityRoutes } = require("./routes/communities");
 const { buildAdminUserRoutes } = require("./routes/admin/adminUsers");
 const {
   buildAdminQuestionnaireRoutes,
@@ -16,6 +19,18 @@ const app = express();
 const prisma = new PrismaClient();
 const path = require("path");
 app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
+
+const profileUploadDir = path.join(__dirname, "..", "uploads", "profiles");
+fs.mkdirSync(profileUploadDir, { recursive: true });
+const profileStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, profileUploadDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const name = `profile_${Date.now()}${Math.floor(Math.random() * 1000)}${ext}`;
+    cb(null, name);
+  },
+});
+const profileUpload = multer({ storage: profileStorage });
 
 // explicit public route to serve project files (avoid auth middleware)
 app.get("/uploads/projects/:file", (req, res) => {
@@ -39,6 +54,10 @@ const SELF_REGISTER_USER_STATUS_ID = Number(
   process.env.SELF_REGISTER_USER_STATUS_ID || 4,
 );
 const ACTIVE_USER_STATUS_ID = Number(process.env.ACTIVE_USER_STATUS_ID || 1);
+const XP_AWARDS = {
+  profileCompleted: 15,
+  questionnaireCompleted: 20,
+};
 
 app.use(cors());
 app.use(express.json());
@@ -90,6 +109,7 @@ app.post("/auth/register", async (req, res) => {
       onboardingClientCompleted: true,
       firstName: true,
       lastName: true,
+      profileImageUrl: true,
       phoneNumber: true,
       discordID: true,
       platformLanguageID: true,
@@ -102,6 +122,7 @@ app.post("/auth/register", async (req, res) => {
       recentGameID: true,
       motivations: true,
       gamerProfile: true,
+      xpTotal: true,
     },
   });
   //added code:
@@ -144,6 +165,19 @@ app.post("/auth/login", async (req, res) => {
   const ok = await bcrypt.compare(password, user.passwordHash);
   if (!ok) return res.status(401).json({ error: "Invalid credentials" });
 
+  await prisma.user.update({
+    where: { userID: user.userID },
+    data: { lastLoginAt: new Date() },
+  });
+  await prisma.userLoginActivity.create({
+    data: {
+      userID: user.userID,
+      loggedInAt: new Date(),
+      ipAddress: req.ip,
+      userAgent: req.get("user-agent"),
+    },
+  });
+
   const token = signToken(user);
   res.json({
     token,
@@ -157,6 +191,7 @@ app.post("/auth/login", async (req, res) => {
       onboardingClientCompleted: user.onboardingClientCompleted,
       firstName: user.firstName,
       lastName: user.lastName,
+      profileImageUrl: user.profileImageUrl,
       phoneNumber: user.phoneNumber,
       discordID: user.discordID,
       platformLanguageID: user.platformLanguageID,
@@ -169,6 +204,7 @@ app.post("/auth/login", async (req, res) => {
       recentGameID: user.recentGameID,
       motivations: user.motivations,
       gamerProfile: user.gamerProfile,
+      xpTotal: user.xpTotal ?? 0,
     },
   });
 });
@@ -188,11 +224,13 @@ app.get("/auth/me", requireAuth, async (req, res) => {
       onboardingClientCompleted: true,
       motivations: true,
       gamerProfile: true,
+      xpTotal: true,
       isEmailVerified: true,
       emailVerifiedAt: true,
       createdAt: true,
       firstName: true,
       lastName: true,
+      profileImageUrl: true,
       phoneNumber: true,
       discordID: true,
       platformLanguageID: true,
@@ -218,12 +256,33 @@ app.patch("/users/me/onboarding", async (req, res, next) => {
       onboardingClientCompleted,
     } = req.body;
 
+    const existing = await prisma.user.findUnique({
+      where: { userID },
+      select: {
+        onboardingProfileCompleted: true,
+        onboardingQuestionnaireCompleted: true,
+      },
+    });
+    if (!existing) return res.status(404).json({ error: "Not found" });
+
+    let xpDelta = 0;
+    if (onboardingProfileCompleted === true && !existing.onboardingProfileCompleted) {
+      xpDelta += XP_AWARDS.profileCompleted;
+    }
+    if (
+      onboardingQuestionnaireCompleted === true &&
+      !existing.onboardingQuestionnaireCompleted
+    ) {
+      xpDelta += XP_AWARDS.questionnaireCompleted;
+    }
+
     const updated = await prisma.user.update({
       where: { userID },
       data: {
         onboardingProfileCompleted,
         onboardingQuestionnaireCompleted,
         onboardingClientCompleted,
+        xpTotal: xpDelta > 0 ? { increment: xpDelta } : undefined,
       },
       select: {
         userID: true,
@@ -232,6 +291,7 @@ app.patch("/users/me/onboarding", async (req, res, next) => {
         onboardingProfileCompleted: true,
         onboardingQuestionnaireCompleted: true,
         onboardingClientCompleted: true,
+        xpTotal: true,
       },
     });
 
@@ -304,6 +364,7 @@ app.patch("/users/me/profile", async (req, res, next) => {
     const {
       firstName,
       lastName,
+      profileImageUrl,
       phoneNumber,
       discordID,
       platformLanguageID,
@@ -322,6 +383,7 @@ app.patch("/users/me/profile", async (req, res, next) => {
       data: {
         firstName,
         lastName,
+        profileImageUrl,
         phoneNumber,
         discordID,
         platformLanguageID:
@@ -350,6 +412,7 @@ app.patch("/users/me/profile", async (req, res, next) => {
         onboardingClientCompleted: true,
         firstName: true,
         lastName: true,
+        profileImageUrl: true,
         phoneNumber: true,
         discordID: true,
         platformLanguageID: true,
@@ -381,8 +444,181 @@ app.patch("/users/me/profile", async (req, res, next) => {
     next(err);
   }
 });
+
+app.patch("/users/me/email", async (req, res, next) => {
+  try {
+    const userID = BigInt(req.user.sub);
+    const { newEmail, password } = req.body || {};
+
+    if (!newEmail || !password) {
+      return res
+        .status(400)
+        .json({ error: "newEmail and password are required" });
+    }
+
+    const normalizedEmail = String(newEmail).trim().toLowerCase();
+    if (!normalizedEmail.includes("@")) {
+      return res.status(400).json({ error: "Invalid email address" });
+    }
+
+    const current = await prisma.user.findUnique({
+      where: { userID },
+      select: { userID: true, email: true, passwordHash: true },
+    });
+    if (!current) return res.status(404).json({ error: "User not found" });
+
+    const ok = await bcrypt.compare(password, current.passwordHash || "");
+    if (!ok) return res.status(401).json({ error: "Current password is incorrect" });
+
+    if (current.email === normalizedEmail) {
+      return res.status(400).json({ error: "New email must be different" });
+    }
+
+    const existing = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+      select: { userID: true },
+    });
+    if (existing && existing.userID !== userID) {
+      return res.status(409).json({ error: "Email already in use" });
+    }
+
+    const updated = await prisma.user.update({
+      where: { userID },
+      data: {
+        email: normalizedEmail,
+        isEmailVerified: false,
+        emailVerifiedAt: null,
+      },
+      select: {
+        userID: true,
+        email: true,
+        roleID: true,
+        communitySettingID: true,
+        onboardingProfileCompleted: true,
+        onboardingQuestionnaireCompleted: true,
+        onboardingClientCompleted: true,
+        firstName: true,
+        lastName: true,
+        profileImageUrl: true,
+      },
+    });
+
+    res.json({ user: updated });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.patch("/users/me/password", async (req, res, next) => {
+  try {
+    const userID = BigInt(req.user.sub);
+    const { currentPassword, newPassword } = req.body || {};
+
+    if (!currentPassword || !newPassword) {
+      return res
+        .status(400)
+        .json({ error: "currentPassword and newPassword are required" });
+    }
+    if (String(newPassword).length < 8) {
+      return res
+        .status(400)
+        .json({ error: "New password must be at least 8 characters" });
+    }
+
+    const current = await prisma.user.findUnique({
+      where: { userID },
+      select: { userID: true, passwordHash: true },
+    });
+    if (!current) return res.status(404).json({ error: "User not found" });
+
+    const ok = await bcrypt.compare(
+      String(currentPassword),
+      current.passwordHash || "",
+    );
+    if (!ok) return res.status(401).json({ error: "Current password is incorrect" });
+
+    const samePassword = await bcrypt.compare(
+      String(newPassword),
+      current.passwordHash || "",
+    );
+    if (samePassword) {
+      return res
+        .status(400)
+        .json({ error: "New password must be different from current password" });
+    }
+
+    const passwordHash = await bcrypt.hash(String(newPassword), 10);
+    await prisma.user.update({
+      where: { userID },
+      data: { passwordHash },
+      select: { userID: true },
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post(
+  "/users/me/profile-image",
+  profileUpload.single("image"),
+  async (req, res, next) => {
+    try {
+      const userID = BigInt(req.user.sub);
+      const file = req.file;
+      if (!file) return res.status(400).json({ error: "No file uploaded" });
+      const profileImageUrl = `/uploads/profiles/${file.filename}`;
+      const updated = await prisma.user.update({
+        where: { userID },
+        data: { profileImageUrl },
+        select: {
+          userID: true,
+          email: true,
+          roleID: true,
+          firstName: true,
+          lastName: true,
+          profileImageUrl: true,
+        },
+      });
+      res.json({ user: updated });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+app.get("/users/me/login-activity", async (req, res, next) => {
+  try {
+    const userID = BigInt(req.user.sub);
+    const logs = await prisma.userLoginActivity.findMany({
+      where: { userID },
+      orderBy: { loggedInAt: "desc" },
+      take: 20,
+      select: {
+        userLoginActivityID: true,
+        loggedInAt: true,
+        ipAddress: true,
+        userAgent: true,
+      },
+    });
+
+    const items = logs.map((log, idx) => ({
+      id: log.userLoginActivityID.toString(),
+      loggedInAt: log.loggedInAt,
+      ipAddress: log.ipAddress,
+      userAgent: log.userAgent,
+      isCurrent: idx === 0,
+    }));
+
+    res.json({ items });
+  } catch (err) {
+    next(err);
+  }
+});
 app.use(buildQuestionnaireRoutes(prisma));
 app.use(buildProjectRoutes(prisma));
+app.use(buildCommunityRoutes(prisma));
 app.use(buildAdminUserRoutes(prisma));
 app.use(buildAdminQuestionnaireRoutes(prisma));
 

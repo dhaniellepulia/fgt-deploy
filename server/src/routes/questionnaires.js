@@ -11,6 +11,7 @@ function buildQuestionnaireRoutes(prisma) {
         orderBy: { createdAt: "desc" },
         select: {
           questionnaireID: true,
+          clientUserID: true,
           title: true,
           description: true,
           statusID: true,
