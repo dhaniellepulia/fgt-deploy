@@ -20,8 +20,11 @@ const prisma = new PrismaClient();
 const path = require("path");
 app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 
-const profileUploadDir = path.join(__dirname, "..", "uploads", "profiles");
+const uploadsRootDir = path.join(__dirname, "..", "uploads");
+const profileUploadDir = path.join(uploadsRootDir, "profiles");
+const projectUploadDir = path.join(uploadsRootDir, "projects");
 fs.mkdirSync(profileUploadDir, { recursive: true });
+fs.mkdirSync(projectUploadDir, { recursive: true });
 const profileStorage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, profileUploadDir),
   filename: (req, file, cb) => {

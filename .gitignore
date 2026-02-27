@@ -24,3 +24,15 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Runtime uploads (do not commit user files)
+server/uploads/*
+!server/uploads/.gitkeep
+!server/uploads/profiles/
+!server/uploads/profiles/.gitkeep
+!server/uploads/projects/
+!server/uploads/projects/.gitkeep
+server/uploads/profiles/*
+!server/uploads/profiles/.gitkeep
+server/uploads/projects/*
+!server/uploads/projects/.gitkeep
