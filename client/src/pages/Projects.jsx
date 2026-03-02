@@ -19,6 +19,8 @@ const statusById = {
 };
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const formInputClass =
+  "bg-gray border border-gray-500 text-gray-200 placeholder-gray-400 focus:placeholder-gray-400 focus:border-blue-400  focus:text-gray-200 transition-colors py-3 px-5 outline-none rounded-lg";
 
 const resolveImageUrlFromItem = (item) => {
   const url =
@@ -195,49 +197,49 @@ function Projects() {
               value={projectForm.title}
               onChange={handleProjectInput}
               placeholder="Project title"
-              className="bg-white text-black rounded p-2"
+              className={formInputClass}
             />
             <input
               name="gameTitle"
               value={projectForm.gameTitle}
               onChange={handleProjectInput}
               placeholder="Game title"
-              className="bg-white text-black rounded p-2"
+              className={formInputClass}
             />
             <input
               name="gameGenre"
               value={projectForm.gameGenre}
               onChange={handleProjectInput}
               placeholder="Game genre"
-              className="bg-white text-black rounded p-2"
+              className={formInputClass}
             />
             <input
               name="gamePlatforms"
               value={projectForm.gamePlatforms}
               onChange={handleProjectInput}
               placeholder="Platforms (PC/Console/Mobile)"
-              className="bg-white text-black rounded p-2"
+              className={formInputClass}
             />
             <input
               name="gameVersion"
               value={projectForm.gameVersion}
               onChange={handleProjectInput}
               placeholder="Game version"
-              className="bg-white text-black rounded p-2"
+              className={formInputClass}
             />
             <textarea
               name="description"
               value={projectForm.description}
               onChange={handleProjectInput}
               placeholder="Project description"
-              className="bg-white text-black rounded p-2 md:col-span-2"
+              className={`${formInputClass} md:col-span-2`}
             />
             <textarea
               name="gameNotes"
               value={projectForm.gameNotes}
               onChange={handleProjectInput}
               placeholder="Game notes"
-              className="bg-white text-black rounded p-2 md:col-span-2"
+              className={`${formInputClass} md:col-span-2`}
             />
           </div>
           <div className="mt-4">
