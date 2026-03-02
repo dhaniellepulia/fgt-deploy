@@ -443,7 +443,7 @@ function ProjectQuestionnaire() {
           <button
             type="submit"
             disabled={saving}
-            className="bg-[#F9B71E] text-black text-sm font-semibold px-8 py-2 rounded disabled:opacity-60"
+            className="bg-[#F9B71E] text-white text-sm font-semibold px-8 py-2 rounded disabled:opacity-60"
           >
             {saving ? "Submitting..." : "Submit Questionnaire"}
           </button>

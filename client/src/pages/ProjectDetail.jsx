@@ -250,7 +250,7 @@ function ProjectDetail() {
             <button
               onClick={handleJoin}
               disabled={joining}
-              className="mt-auto w-full bg-[#F9B71E] hover:bg-[#c48e12] text-black py-4 rounded-2xl font-bold text-lg transition-colors shadow-lg disabled:opacity-60"
+              className="mt-auto w-full bg-[#F9B71E] hover:bg-[#c48e12] text-white py-4 rounded-2xl font-bold text-lg transition-colors shadow-lg disabled:opacity-60"
             >
               {joining ? "Applying..." : "Apply to Join"}
             </button>
@@ -316,7 +316,7 @@ function ProjectDetail() {
                           }
                         }}
                         disabled={questionnaire.hasSubmitted}
-                        className="bg-[#F9B71E] text-black text-xs font-semibold px-4 py-2 rounded disabled:opacity-60"
+                        className="bg-[#F9B71E] text-white text-xs font-semibold px-4 py-2 rounded disabled:opacity-60"
                       >
                         {questionnaire.hasSubmitted ? "Completed" : "Start"}
                       </button>

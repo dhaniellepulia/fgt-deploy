@@ -35,6 +35,7 @@ import ImportantInformation from "./pages/ImportantInformation.jsx";
 import Download from "./pages/Download.jsx";
 import ClientProjectDetail from "./pages/ClientProjectDetail.jsx";
 import ClientQuestionnaireBuilder from "./pages/ClientQuestionnaireBuilder.jsx";
+import ClientCommunity from "./pages/ClientCommunity.jsx";
 import AdminRoute from "./auth/AdminRoute.jsx";
 import AccountManagement from "./pages/AdminAccountManagement.jsx";
 import RegistrationApproval from "./pages/AdminRegistrationApproval.jsx";
@@ -119,6 +120,7 @@ function App() {
         </Route>
 
         <Route path="/client/projects/:id" element={<ClientProjectDetail />} />
+        <Route path="/client/community" element={<ClientCommunity />} />
         <Route
           path="/client/projects/:projectId/questionnaires/:questionnaireId"
           element={<ClientQuestionnaireBuilder />}

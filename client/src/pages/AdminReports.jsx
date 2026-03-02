@@ -62,12 +62,17 @@ export default function AdminReports() {
         const items = (projRes?.items || []).map((p) => ({
           projectID: Number(p.projectID || p.id || p.id),
           title: p.title,
+          clientUserID: p.clientUserID ? Number(p.clientUserID) : null,
           clientName: p.clientName || p.client?.email || "",
           createdAt: p.createdAt,
           questionnaires: (p.questionnaires || [])
             .filter((q) => [1, 2].includes(Number(q.statusID)))
             .map((q) => ({
               questionnaireID: Number(q.questionnaireID ?? q.id ?? q.id),
+              clientUserID:
+                q.clientUserID !== undefined && q.clientUserID !== null
+                  ? Number(q.clientUserID)
+                  : null,
               title: q.title,
               description: q.description,
               startsAt: q.startsAt,
@@ -111,6 +116,10 @@ export default function AdminReports() {
             const projId = q.projectID ? String(q.projectID) : null;
             const qObj = {
               questionnaireID: Number(q.questionnaireID ?? q.id ?? q.id),
+              clientUserID:
+                q.clientUserID !== undefined && q.clientUserID !== null
+                  ? Number(q.clientUserID)
+                  : null,
               title: q.title,
               description: q.description,
               startsAt: q.startsAt,
@@ -136,6 +145,7 @@ export default function AdminReports() {
               {
                 projectID: "__unattached__",
                 title: "Unattached / Missing Questionnaires",
+                clientUserID: null,
                 clientName: "",
                 createdAt: null,
                 questionnaires: uncategorized,
@@ -154,7 +164,7 @@ export default function AdminReports() {
 
         const playQs = finalItems.flatMap((p) =>
           (p.questionnaires || [])
-            .filter((q) => Number(q.statusID) === 1)
+            .filter((q) => Number(q.statusID) === 2)
             .map((q) => ({
               projectID: p.projectID,
               questionnaireID: q.questionnaireID,
@@ -248,17 +258,34 @@ export default function AdminReports() {
             projectID: p.projectID,
             projectTitle: p.title,
             clientName: p.clientName,
-            userType: Number(q.statusID) === 1 ? "playtester" : "client",
+            clientUserID:
+              q.clientUserID !== undefined && q.clientUserID !== null
+                ? Number(q.clientUserID)
+                : null,
+            userType: Number(q.statusID) === 2 ? "playtester" : "client",
           })),
       ),
     [projects],
   );
 
+  const clientUserIdSet = useMemo(
+    () =>
+      new Set(
+        (clients || [])
+          .map((c) => c?.userID)
+          .filter((id) => id !== undefined && id !== null)
+          .map((id) => String(id)),
+      ),
+    [clients],
+  );
+
   const playtesterQuestionnaires = questionnaires.filter(
     (q) => q.userType === "playtester",
   );
-  const clientQuestionnaires = questionnaires.filter(
-    (q) => q.userType === "client",
+  const clientQuestionnaires = questionnaires.filter((q) =>
+    q.clientUserID !== null && q.clientUserID !== undefined
+      ? clientUserIdSet.has(String(q.clientUserID))
+      : false,
   );
 
   const totalPlaytesters = playtesters.length;
@@ -276,7 +303,7 @@ export default function AdminReports() {
   const responsesByProject = useMemo(() => {
     return projects.map((p) => {
       const count = (p.questionnaires || []).reduce((sum, q) => {
-        if (Number(q.statusID) !== 1) return sum;
+        if (Number(q.statusID) !== 2) return sum;
         const rid = Number(q.questionnaireID);
         return sum + (responsesMap[rid]?.length || 0);
       }, 0);
@@ -611,8 +638,11 @@ export default function AdminReports() {
                   key={q.questionnaireID}
                   role="button"
                   tabIndex={0}
-                  onClick={() => openQ(q)}
-                  onKeyDown={(e) => e.key === "Enter" && openQ(q)}
+                  onClick={() => openQ({ ...q, openedFrom: "playtester" })}
+                  onKeyDown={(e) =>
+                    e.key === "Enter" &&
+                    openQ({ ...q, openedFrom: "playtester" })
+                  }
                   className="grid grid-cols-12 items-center rounded-lg border border-[#ffffff49] text-sm bg-[#1F1F1F] cursor-pointer hover:shadow-lg hover:bg-gray-800"
                 >
                   <div className="col-span-1 p-4 border-r border-[#ffffff49] bg-[#323232] text-neutral-300 font-medium whitespace-nowrap rounded-bl-lg rounded-tl-lg h-full flex items-center">
@@ -697,8 +727,10 @@ export default function AdminReports() {
                   key={q.questionnaireID}
                   role="button"
                   tabIndex={0}
-                  onClick={() => openQ(q)}
-                  onKeyDown={(e) => e.key === "Enter" && openQ(q)}
+                  onClick={() => openQ({ ...q, openedFrom: "client" })}
+                  onKeyDown={(e) =>
+                    e.key === "Enter" && openQ({ ...q, openedFrom: "client" })
+                  }
                   className="grid grid-cols-12 items-center rounded-lg border border-[#ffffff49] text-sm bg-[#1F1F1F] cursor-pointer hover:shadow-lg hover:bg-gray-800 mb-2"
                 >
                   <div className="col-span-1 p-4 border-r border-[#ffffff49] bg-[#323232] text-neutral-300 font-medium whitespace-nowrap rounded-bl-lg rounded-tl-lg h-full flex items-center">
@@ -812,55 +844,56 @@ export default function AdminReports() {
             </div>
 
             <div className="pt-4 border-t border-[#ffffff10]">
-              {selectedQ.userType === "playtester" && (
-                <div className="space-y-4">
-                  <div className="mt-5 text-md font-semibold text-neutral-200">
-                    Player Responses
+              {selectedQ.userType === "playtester" &&
+                selectedQ.openedFrom !== "client" && (
+                  <div className="space-y-4">
+                    <div className="mt-5 text-md font-semibold text-neutral-200">
+                      Player Responses
+                    </div>
+
+                    {(responsesMap[selectedQ.questionnaireID] || []).length >
+                    0 ? (
+                      (responsesMap[selectedQ.questionnaireID] || []).map(
+                        (resp) => (
+                          <div
+                            key={resp.responderID}
+                            className="flex items-center justify-between p-3 bg-transparent border border-[#ffffff49] rounded-lg"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="h-10 w-10 rounded-full bg-[#323232] flex items-center justify-center text-white font-semibold text-sm">
+                                {initials(resp.name)}
+                              </div>
+                              <div>
+                                <div className="font-semibold text-white">
+                                  {resp.name}
+                                </div>
+                                <div className="text-xs text-neutral-400">
+                                  {fmt(resp.submittedAt)}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => {
+                                  setSelectedQ((s) => ({
+                                    ...s,
+                                    _viewResponse: resp,
+                                  }));
+                                }}
+                                className="text-sm bg-[#1f5fe0] text-white px-3 py-1 rounded-md"
+                              >
+                                View full
+                              </button>
+                            </div>
+                          </div>
+                        ),
+                      )
+                    ) : (
+                      <div className="text-gray-300">No responses yet.</div>
+                    )}
                   </div>
-
-                  {(responsesMap[selectedQ.questionnaireID] || []).length >
-                  0 ? (
-                    (responsesMap[selectedQ.questionnaireID] || []).map(
-                      (resp) => (
-                        <div
-                          key={resp.responderID}
-                          className="flex items-center justify-between p-3 bg-transparent border border-[#ffffff49] rounded-lg"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-full bg-[#323232] flex items-center justify-center text-white font-semibold text-sm">
-                              {initials(resp.name)}
-                            </div>
-                            <div>
-                              <div className="font-semibold text-white">
-                                {resp.name}
-                              </div>
-                              <div className="text-xs text-neutral-400">
-                                {fmt(resp.submittedAt)}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => {
-                                setSelectedQ((s) => ({
-                                  ...s,
-                                  _viewResponse: resp,
-                                }));
-                              }}
-                              className="text-sm bg-[#1f5fe0] text-white px-3 py-1 rounded-md"
-                            >
-                              View full
-                            </button>
-                          </div>
-                        </div>
-                      ),
-                    )
-                  ) : (
-                    <div className="text-gray-300">No responses yet.</div>
-                  )}
-                </div>
-              )}
+                )}
             </div>
           </div>
 

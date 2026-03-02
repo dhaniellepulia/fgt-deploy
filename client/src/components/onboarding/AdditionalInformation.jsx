@@ -5,6 +5,8 @@ import { useNavigate } from "react-router-dom";
 import { fetchGenres, fetchGames } from "../../api/metadata";
 import { updateProfile } from "../../api/profile";
 import { countries } from "../../data/countries";
+import Select from "../Select.jsx";
+import MultiSelect from "../MultiSelect.jsx";
 
 const languageOptions = [
   "English",
@@ -44,6 +46,8 @@ const languageOptions = [
   "Chinese (Traditional)",
 ];
 const experienceLevels = ["Beginner", "Intermediate", "Pro"];
+const fieldClass =
+  "bg-gray border border-gray-500 text-gray-200 placeholder-gray-400 focus:placeholder-gray-400 focus:border-blue-400 focus:text-gray-200 transition-colors py-3 px-5 outline-none rounded-lg w-full";
 
 function AdditionalInformation() {
   const navigate = useNavigate();
@@ -87,7 +91,7 @@ function AdditionalInformation() {
     );
     const hasQuestionnaireCompleted = Boolean(
       user?.onboardingQuestionnaireCompleted ||
-        localOnboarding.questionnaireCompleted,
+      localOnboarding.questionnaireCompleted,
     );
 
     if (hasQuestionnaireCompleted) {
@@ -104,29 +108,13 @@ function AdditionalInformation() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleLanguagesChange = (e) => {
-    const selected = Array.from(e.target.selectedOptions).map(
-      (option) => option.value
-    );
-    setFormData((prev) => ({ ...prev, spokenLanguages: selected }));
-  };
-
-  const handleGenreToggle = (genreID) => {
-    setFormData((prev) => ({
-      ...prev,
-      preferredGenreIDs: prev.preferredGenreIDs.includes(genreID)
-        ? prev.preferredGenreIDs.filter((id) => id !== genreID)
-        : [...prev.preferredGenreIDs, genreID],
-    }));
-  };
-
   const toBirthdate = () => {
     if (!formData.birthYear || !formData.birthMonth || !formData.birthDay) {
       return null;
     }
     return `${formData.birthYear}-${String(formData.birthMonth).padStart(
       2,
-      "0"
+      "0",
     )}-${String(formData.birthDay).padStart(2, "0")}`;
   };
 
@@ -183,7 +171,7 @@ function AdditionalInformation() {
                 type="text"
                 name="firstName"
                 placeholder="First Name"
-                className="w-full bg-white text-black border border-neutral-700 rounded p-2.5 text-sm focus:outline-none focus:border-orange-500 transition-colors"
+                className={fieldClass}
                 onChange={handleChange}
               />
             </div>
@@ -196,7 +184,7 @@ function AdditionalInformation() {
                 type="text"
                 name="lastName"
                 placeholder="Last Name"
-                className="w-full bg-white text-black border border-neutral-700 rounded p-2.5 text-sm focus:outline-none focus:border-orange-500 transition-colors"
+                className={fieldClass}
                 onChange={handleChange}
               />
             </div>
@@ -205,15 +193,15 @@ function AdditionalInformation() {
               <label className="block text-xs font-semibold">
                 Phone Number
               </label>
-              <div className="flex border border-neutral-700">
-                <div className="bg-[#e5e5e5] text-black px-3 flex items-center rounded-l text-sm font-medium">
-                  +
+              <div className="flex border border-gray-500 rounded-lg overflow-hidden">
+                <div className="bg-[#2f2f2f] text-gray-300 px-3 flex items-center text-sm font-medium">
+                  +63
                 </div>
                 <input
                   type="text"
                   name="phoneNumber"
                   placeholder="Phone Number"
-                  className="w-full bg-white text-black rounded-r p-2.5 text-sm focus:outline-none"
+                  className={`${fieldClass} border-0 rounded-none`}
                   onChange={handleChange}
                 />
               </div>
@@ -225,7 +213,7 @@ function AdditionalInformation() {
                 type="text"
                 name="discordID"
                 placeholder="yourusername000"
-                className="w-full bg-white text-black border border-neutral-700 rounded p-2.5 text-sm focus:outline-none"
+                className={fieldClass}
                 onChange={handleChange}
               />
             </div>
@@ -234,15 +222,18 @@ function AdditionalInformation() {
               <label className="block text-xs font-semibold">
                 Platform Language
               </label>
-              <select
+              <Select
                 name="platformLanguageID"
-                className="w-full bg-white text-black border border-neutral-700 rounded p-2.5 text-sm appearance-none focus:outline-none"
+                className="w-full"
+                placeholder="Select language"
+                options={[
+                  { value: 1, label: "English" },
+                  { value: 2, label: "Korean" },
+                  { value: 3, label: "Japanese" },
+                ]}
+                value={formData.platformLanguageID}
                 onChange={handleChange}
-              >
-                <option value={1}>English</option>
-                <option value={2}>Korean</option>
-                <option value={3}>Japanese</option>
-              </select>
+              />
             </div>
           </div>
         </section>
@@ -259,25 +250,23 @@ function AdditionalInformation() {
                 Birthdate <span className="text-red-500">*</span>
               </label>
               <div className="grid grid-cols-3 gap-4 max-w-sm">
-                <select
+                <Select
                   name="birthDay"
-                  className="bg-white border text-black border-neutral-700 rounded p-2 text-sm"
+                  className="w-full"
+                  placeholder="Day"
+                  value={formData.birthDay}
+                  options={[...Array(31)].map((_, i) => ({
+                    value: i + 1,
+                    label: String(i + 1),
+                  }))}
                   onChange={handleChange}
-                >
-                  <option value="">Day</option>
-                  {[...Array(31)].map((_, i) => (
-                    <option key={i} value={i + 1}>
-                      {i + 1}
-                    </option>
-                  ))}
-                </select>
-                <select
+                />
+                <Select
                   name="birthMonth"
-                  className="bg-white text-black border border-neutral-700 rounded p-2 text-sm"
-                  onChange={handleChange}
-                >
-                  <option value="">Month</option>
-                  {[
+                  className="w-full"
+                  placeholder="Month"
+                  value={formData.birthMonth}
+                  options={[
                     "Jan",
                     "Feb",
                     "Mar",
@@ -290,24 +279,23 @@ function AdditionalInformation() {
                     "Oct",
                     "Nov",
                     "Dec",
-                  ].map((m, index) => (
-                    <option key={m} value={index + 1}>
-                      {m}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  name="birthYear"
-                  className="bg-white text-black border border-neutral-700 rounded p-2 text-sm"
+                  ].map((m, index) => ({
+                    value: index + 1,
+                    label: m,
+                  }))}
                   onChange={handleChange}
-                >
-                  <option value="">Year</option>
-                  {[...Array(60)].map((_, i) => (
-                    <option key={i} value={2010 - i}>
-                      {2010 - i}
-                    </option>
-                  ))}
-                </select>
+                />
+                <Select
+                  name="birthYear"
+                  className="w-full"
+                  placeholder="Year"
+                  value={formData.birthYear}
+                  options={[...Array(60)].map((_, i) => ({
+                    value: 2010 - i,
+                    label: String(2010 - i),
+                  }))}
+                  onChange={handleChange}
+                />
               </div>
             </div>
 
@@ -316,36 +304,34 @@ function AdditionalInformation() {
                 <label className="block text-xs font-semibold">
                   Country of Origin <span className="text-red-500">*</span>
                 </label>
-                <select
+                <Select
                   name="countryOriginCode"
-                  className="w-full bg-white text-black border border-neutral-700 rounded p-2.5 text-sm"
+                  className="w-full"
+                  placeholder="Where are you from?"
+                  options={countries.map((country) => ({
+                    value: country.code,
+                    label: country.name,
+                  }))}
+                  value={formData.countryOriginCode}
                   onChange={handleChange}
-                >
-                  <option value="">Where are you from?</option>
-                  {countries.map((country) => (
-                    <option key={country.code} value={country.code}>
-                      {country.name}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
 
               <div className="space-y-1.5">
                 <label className="block text-xs font-semibold">
                   Country of Residence <span className="text-red-500">*</span>
                 </label>
-                <select
+                <Select
                   name="countryResidenceCode"
-                  className="w-full bg-white text-black border border-neutral-700 rounded p-2.5 text-sm"
+                  className="w-full"
+                  placeholder="Where do you live now?"
+                  options={countries.map((country) => ({
+                    value: country.code,
+                    label: country.name,
+                  }))}
+                  value={formData.countryResidenceCode}
                   onChange={handleChange}
-                >
-                  <option value="">Where do you live now?</option>
-                  {countries.map((country) => (
-                    <option key={country.code} value={country.code}>
-                      {country.name}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
             </div>
 
@@ -356,17 +342,19 @@ function AdditionalInformation() {
               <p className="text-[10px] text-neutral-400">
                 This will determine the playtests for which you are eligible.
               </p>
-              <select
+              <Select
                 name="gender"
-                className="w-full bg-white text-black border border-neutral-700 rounded p-2.5 text-sm"
+                className="w-full"
+                placeholder="Select gender"
+                options={[
+                  { value: "Male", label: "Male" },
+                  { value: "Female", label: "Female" },
+                  { value: "Non-binary", label: "Non-binary" },
+                  { value: "Prefer not to say", label: "Prefer not to say" },
+                ]}
+                value={formData.gender}
                 onChange={handleChange}
-              >
-                <option value="">Select gender</option>
-                <option>Male</option>
-                <option>Female</option>
-                <option>Non-binary</option>
-                <option>Prefer not to say</option>
-              </select>
+              />
             </div>
 
             <div className="space-y-1.5 max-w-lg">
@@ -374,40 +362,34 @@ function AdditionalInformation() {
                 What languages do you speak?{" "}
                 <span className="text-red-500">*</span>
               </label>
-              <select
-                multiple
-                name="spokenLanguages"
+              <MultiSelect
                 value={formData.spokenLanguages}
-                onChange={handleLanguagesChange}
-                className="w-full bg-white text-black border border-neutral-700 rounded p-2.5 text-sm min-h-32"
-              >
-                {languageOptions.map((language) => (
-                  <option key={language} value={language}>
-                    {language}
-                  </option>
-                ))}
-              </select>
-              <p className="text-[10px] text-neutral-400">
-                Hold Ctrl (Windows) or Cmd (Mac) to select multiple.
-              </p>
+                onChange={(values) =>
+                  setFormData((prev) => ({ ...prev, spokenLanguages: values }))
+                }
+                options={languageOptions.map((language) => ({
+                  value: language,
+                  label: language,
+                }))}
+                placeholder="Select spoken languages"
+              />
             </div>
 
             <div className="space-y-1.5 max-w-lg">
               <label className="block text-xs font-semibold">
                 Level <span className="text-red-500">*</span>
               </label>
-              <select
+              <Select
                 name="experienceLevel"
-                className="w-full bg-white text-black border border-neutral-700 rounded p-2.5 text-sm"
+                className="w-full"
+                placeholder="Select level"
+                value={formData.experienceLevel}
+                options={experienceLevels.map((level) => ({
+                  value: level,
+                  label: level,
+                }))}
                 onChange={handleChange}
-              >
-                <option value="">Select level</option>
-                {experienceLevels.map((level) => (
-                  <option key={level} value={level}>
-                    {level}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
           </div>
         </section>
@@ -423,41 +405,37 @@ function AdditionalInformation() {
               <label className="block text-xs font-semibold mb-2">
                 Preferred Genres
               </label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {genres.map((genre) => (
-                  <label
-                    key={genre.gameGenreID}
-                    className="flex items-center gap-2 text-sm text-neutral-300"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={formData.preferredGenreIDs.includes(
-                        genre.gameGenreID
-                      )}
-                      onChange={() => handleGenreToggle(genre.gameGenreID)}
-                    />
-                    {genre.name}
-                  </label>
-                ))}
-              </div>
+              <MultiSelect
+                value={formData.preferredGenreIDs}
+                onChange={(values) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    preferredGenreIDs: values,
+                  }))
+                }
+                options={genres.map((genre) => ({
+                  value: genre.gameGenreID,
+                  label: genre.name,
+                }))}
+                placeholder="Select preferred genres"
+              />
             </div>
 
             <div className="space-y-1.5">
               <label className="block text-xs font-semibold">
                 Most Recently Played Game
               </label>
-              <select
+              <Select
                 name="recentGameID"
-                className="w-full bg-white text-black border border-neutral-700 rounded p-2.5 text-sm"
+                className="w-full"
+                placeholder="Select a game"
+                options={games.map((game) => ({
+                  value: game.gameID,
+                  label: game.name,
+                }))}
+                value={formData.recentGameID}
                 onChange={handleChange}
-              >
-                <option value="">Select a game</option>
-                {games.map((game) => (
-                  <option key={game.gameID} value={game.gameID}>
-                    {game.name}
-                  </option>
-                ))}
-              </select>
+              />
               <p className="text-[10px] text-neutral-400 mt-2">
                 Use this to help clients match playtesters with similar
                 mechanics.

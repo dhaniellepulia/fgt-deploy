@@ -1,6 +1,7 @@
 // Dashboard > User Dashboard menu
 
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Card from "../components/Card.jsx";
 import { ChevronRight } from "lucide-react";
 import TopBar from "../components/layouts/TopBar.jsx";
@@ -8,16 +9,43 @@ import { useAuth } from "../auth/AuthContext";
 
 import Coin from "../assets/coin.svg";
 import Time from "../assets/time.svg";
-import DiscordLogo from "../assets/discord logo.png";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+
+function getLevelProgress(totalXp = 0) {
+  let level = 1;
+  let xpIntoLevel = Math.max(0, Number(totalXp) || 0);
+  let xpNeededForNext = 50 + (level - 1) * 25;
+
+  while (xpIntoLevel >= xpNeededForNext) {
+    xpIntoLevel -= xpNeededForNext;
+    level += 1;
+    xpNeededForNext = 50 + (level - 1) * 25;
+  }
+
+  const progressPct = Math.min(
+    100,
+    Math.max(0, (xpIntoLevel / xpNeededForNext) * 100),
+  );
+
+  return {
+    level,
+    nextLevel: level + 1,
+    xpIntoLevel,
+    xpNeededForNext,
+    progressPct,
+  };
+}
+
 function UserDashboard() {
+  const navigate = useNavigate();
   const { user, token } = useAuth();
   const [sessions, setSessions] = useState([]);
   const [myProjects, setMyProjects] = useState([]);
   const [playtestsCount, setPlaytestsCount] = useState(0);
   const [coins, setCoins] = useState(0);
   const [sessionsCount, setSessionsCount] = useState(0);
+  const [levelState, setLevelState] = useState(() => getLevelProgress(0));
 
   const [achievements, setAchievements] = useState([
     {
@@ -57,6 +85,37 @@ function UserDashboard() {
       progress: "0/1",
     },
   ]);
+
+  useEffect(() => {
+    if (!token) return;
+    let mounted = true;
+    async function loadXp() {
+      try {
+        const res = await fetch(`${API_BASE}/user-xp-balance/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        const item = data?.item ?? {};
+        if (!mounted) return;
+        setLevelState({
+          level: Number(item.currentLevel ?? 1),
+          nextLevel: Number(item.nextLevel ?? 2),
+          xpIntoLevel: Number(item.xpIntoLevel ?? 0),
+          xpNeededForNext: Number(item.xpNeededForNextLevel ?? 50),
+          progressPct: Number(item.progressPct ?? 0),
+        });
+      } catch (err) {
+        // fallback to auth payload while migration/endpoint is rolling out
+        const fallbackXp = Number(user?.xpTotal ?? 0);
+        if (mounted) setLevelState(getLevelProgress(fallbackXp));
+      }
+    }
+    loadXp();
+    return () => {
+      mounted = false;
+    };
+  }, [token, user?.xpTotal]);
   useEffect(() => {
     let mounted = true;
     async function load() {
@@ -96,6 +155,7 @@ function UserDashboard() {
 
         // try membership endpoint first; fallback to projects list if not available
         let memberships = [];
+        let loadedFromMemberships = false;
         try {
           const mres = await fetch(`${API_BASE}/project-memberships/me`, {
             headers,
@@ -107,6 +167,7 @@ function UserDashboard() {
               : mdata.items
                 ? [mdata.items]
                 : [];
+            loadedFromMemberships = memberships.length > 0;
             if (mounted) setPlaytestsCount(memberships.length);
           }
         } catch (e) {
@@ -127,11 +188,13 @@ function UserDashboard() {
           }
         }
 
-        const needEnrich = projects.filter(
-          (p) =>
-            (p.points == null || p.points === undefined) &&
-            (p.projectID || p.id),
-        );
+        const needEnrich = loadedFromMemberships
+          ? []
+          : projects.filter(
+              (p) =>
+                (p.points == null || p.points === undefined) &&
+                (p.projectID || p.id),
+            );
         if (needEnrich.length) {
           try {
             const details = await Promise.all(
@@ -442,11 +505,7 @@ function UserDashboard() {
     };
   }, [token]);
 
-  const displayName =
-    user?.name ||
-    user?.profile?.firstName ||
-    user?.email?.split("@")[0] ||
-    "there";
+  const displayName = user?.name || user?.firstName || "Playtester";
 
   return (
     <div className="min-h-screen">
@@ -596,7 +655,7 @@ function UserDashboard() {
               <div className="flex flex-row items-center gap-2">
                 <img
                   className="max-w-[80px] w-full h-auto"
-                  src={DiscordLogo}
+                  src="../src/assets/discord logo.png"
                   alt="discord logo"
                 />
                 <button className="inline gap-2 rounded-md bg-yellow-400 py-1 px-3 text-sm font-semibold text-white hover:bg-yellow-300 transition">
@@ -612,16 +671,21 @@ function UserDashboard() {
             <h3 className="font-semibold mb-4 text-2xl">Account Status</h3>
 
             <div className="flex items-center justify-between text-sm mb-1">
-              <span className="text-[#F9B71E]">2</span>
+              <span className="text-[#F9B71E]">{levelState.level}</span>
               <span className="text-[#F9B71E] text-lg font-bold">LEVEL</span>
-              <span className="text-[#F9B71E]">3</span>
+              <span className="text-[#F9B71E]">{levelState.nextLevel}</span>
             </div>
 
             <div className="w-full h-3 bg-white/20 rounded-full mb-4">
-              <div className="h-3 w-[10%] bg-yellow-400 rounded-full" />
+              <div
+                className="h-3 bg-yellow-400 rounded-full"
+                style={{ width: `${levelState.progressPct}%` }}
+              />
             </div>
 
-            <p className="text-xs text-right mb-8 text-[#F9B71E]">5/51 XP</p>
+            <p className="text-xs text-right mb-8 text-[#F9B71E]">
+              {levelState.xpIntoLevel}/{levelState.xpNeededForNext} XP
+            </p>
             <hr className="border-[#ffffff73] border-1 mb-4" />
             <div className="grid grid-cols-3 text-center text-sm">
               <div>
@@ -674,8 +738,11 @@ function UserDashboard() {
             </div>
           </Card>
 
-          <button className="w-full rounded-2xl bg-gradient-to-l from-[#3B117A] to-[#4D2FA7] p-10 text-white font-semibold flex items-center justify-between text-2xl">
-            Add New Project
+          <button
+            onClick={() => navigate("/projects")}
+            className="w-full rounded-2xl bg-gradient-to-l from-[#3B117A] to-[#4D2FA7] p-10 text-white font-semibold flex items-center justify-between text-2xl"
+          >
+            Join New Playtest
             <span className="w-8 h-8 rounded-full border-2 border-[#F9B71E] flex items-center justify-center">
               <ChevronRight className="text-[#F9B71E]" size={20} />
             </span>

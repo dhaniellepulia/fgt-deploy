@@ -2,27 +2,35 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
+import gamerProfileImg from "../../assets/gamer-profile.gif";
+import gameSelectionImg from "../../assets/game-selection.gif";
+import rewardsImg from "../../assets/earn-rewards.gif";
+import communityImg from "../../assets/community.gif";
 
 // Mock data for the slides
 const slides = [
   {
     title: "Gamer Profile",
     description: "Playtests will be assigned to you based on your interests.",
+    image: gamerProfileImg,
   },
   {
     title: "Game Selection",
     description:
       "Choose from a wide variety of genres and upcoming indie titles.",
+    image: gameSelectionImg,
   },
   {
     title: "Earn Rewards",
     description:
       "Complete playtests and provide feedback to earn exclusive points.",
+    image: rewardsImg,
   },
   {
     title: "Join the Community",
     description:
       "Connect with other playtesters and developers around the world.",
+    image: communityImg,
   },
 ];
 
@@ -39,7 +47,7 @@ function WelcomeMessage() {
     );
     const hasQuestionnaireCompleted = Boolean(
       user?.onboardingQuestionnaireCompleted ||
-        localOnboarding.questionnaireCompleted,
+      localOnboarding.questionnaireCompleted,
     );
 
     if (hasQuestionnaireCompleted) {
@@ -80,36 +88,22 @@ function WelcomeMessage() {
         </div>
 
         {/* Carousel / Image Placeholder */}
-        <div className="relative aspect-video bg-[#444444] group overflow-hidden">
+        <div className="relative aspect-video bg-[#292d33] group overflow-hidden">
           <div
             className="absolute inset-0 flex items-center justify-center transition-opacity duration-500"
             key={currentIndex}
           >
-            <svg
-              className="w-full h-full text-[#333333]"
-              viewBox="0 0 100 100"
-              preserveAspectRatio="none"
-            >
-              <line
-                x1="0"
-                y1="0"
-                x2="100"
-                y2="100"
-                stroke="currentColor"
-                strokeWidth="0.5"
+            {slides[currentIndex].image ? (
+              <img
+                src={slides[currentIndex].image}
+                alt={slides[currentIndex].title}
+                className="w-full h-full object-contain"
               />
-              <line
-                x1="100"
-                y1="0"
-                x2="0"
-                y2="100"
-                stroke="currentColor"
-                strokeWidth="0.5"
-              />
-            </svg>
-            <span className="absolute text-white/10 text-8xl font-black select-none">
-              {currentIndex + 1}
-            </span>
+            ) : (
+              <span className="absolute text-white/10 text-8xl font-black select-none">
+                {currentIndex + 1}
+              </span>
+            )}
           </div>
 
           {/* Left Arrow */}

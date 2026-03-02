@@ -1,5 +1,5 @@
 ﻿import React, { useMemo, useState, useEffect } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, ImagePlus } from "lucide-react";
 import TopBar from "../components/layouts/TopBar";
 import OverlayModal from "../components/OverlayModal";
 import ConfirmDialog from "../components/ConfirmDialog";
@@ -51,14 +51,17 @@ export default function AdminProjectManagement() {
   const [editProject, setEditProject] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
+  const [pendingImageFile, setPendingImageFile] = useState(null);
 
   useEffect(() => {
+    // Keep local staged preview while image is pending save.
+    if (pendingImageFile && imagePreview?.startsWith("blob:")) return;
     if (selectedProject?.projectImageUrl) {
       const base = import.meta.env.VITE_API_URL || "http://localhost:4000";
       const url = String(selectedProject.projectImageUrl || "");
       setImagePreview(url.startsWith("/") ? `${base}${url}` : url);
     } else setImagePreview(null);
-  }, [selectedProject]);
+  }, [selectedProject, pendingImageFile, imagePreview]);
   const [showAddProject, setShowAddProject] = useState(false);
   const [newProjectTitle, setNewProjectTitle] = useState("");
   const [newProjectClient, setNewProjectClient] = useState("");
@@ -160,6 +163,7 @@ export default function AdminProjectManagement() {
   }, [projects, sortBy, direction]);
 
   const openProject = async (p) => {
+    setPendingImageFile(null);
     setSelectedProject(p);
     setEditProject({ ...p });
 
@@ -201,47 +205,14 @@ export default function AdminProjectManagement() {
     }
   };
 
-  const onImageSelected = async (e) => {
+  const onImageSelected = (e) => {
     const f = e?.target?.files?.[0];
-    console.log("selected file", f);
-    if (!f || !editProject || !token) return;
-
-    const localUrl = URL.createObjectURL(f);
-    setImagePreview(localUrl);
-    setUploadingImage(true);
-    try {
-      const res = await uploadProjectImage(editProject.projectID, token, f);
-      console.log("upload response", res);
-      const updated = res?.item || res || null;
-      if (updated?.projectImageUrl) {
-        const base = import.meta.env.VITE_API_URL || "http://localhost:4000";
-        const url = String(updated.projectImageUrl || "");
-        const absolute = url.startsWith("/") ? `${base}${url}` : url;
-
-        // update preview and all relevant state so UI doesn't revert
-        setImagePreview(absolute);
-        setEditProject((p) => ({
-          ...(p || {}),
-          projectImageUrl: updated.projectImageUrl,
-        }));
-        setSelectedProject(updated); // IMPORTANT: keep selectedProject in sync
-        setProjects((prev) =>
-          Array.isArray(prev)
-            ? prev.map((pp) =>
-                pp.projectID === updated.projectID ? updated : pp,
-              )
-            : prev,
-        );
-
-        // revoke the local object URL to free memory
-        URL.revokeObjectURL(localUrl);
-      }
-    } catch (err) {
-      console.error("Image upload failed", err);
-      alert("Image upload failed");
-    } finally {
-      setUploadingImage(false);
+    if (!f || !editProject) return;
+    if (imagePreview && imagePreview.startsWith("blob:")) {
+      URL.revokeObjectURL(imagePreview);
     }
+    setPendingImageFile(f);
+    setImagePreview(URL.createObjectURL(f));
   };
 
   const updateQuestionnaireStatus = async (q, newStatusID) => {
@@ -274,8 +245,13 @@ export default function AdminProjectManagement() {
   };
 
   const closeModal = () => {
+    if (imagePreview && imagePreview.startsWith("blob:")) {
+      URL.revokeObjectURL(imagePreview);
+    }
     setSelectedProject(null);
     setEditProject(null);
+    setPendingImageFile(null);
+    setImagePreview(null);
     setShowAddQuestionnaire(false);
     resetQuestionnaireBuilder();
     setEditingQuestionnaire(false);
@@ -349,6 +325,7 @@ export default function AdminProjectManagement() {
     if (!editProject) return;
     try {
       if (!token) throw new Error("Not authenticated");
+      setUploadingImage(true);
       const { projectID, ...body } = editProject;
       const gp = Array.isArray(body.gamePlatforms)
         ? body.gamePlatforms
@@ -363,7 +340,27 @@ export default function AdminProjectManagement() {
           body.clientUserID === undefined ? undefined : body.clientUserID,
       };
       const res = await updateClientProject(projectID, token, normalized);
-      const updated = res?.item || res || { projectID, ...normalized };
+      let updated = res?.item || res || { projectID, ...normalized };
+
+      if (pendingImageFile) {
+        const imgRes = await uploadProjectImage(
+          projectID,
+          token,
+          pendingImageFile,
+        );
+        const imageUpdated = imgRes?.item || imgRes || null;
+        if (imageUpdated?.projectImageUrl) {
+          updated = {
+            ...updated,
+            ...imageUpdated,
+            questionnaires:
+              imageUpdated.questionnaires ??
+              updated.questionnaires ??
+              selectedProject?.questionnaires ??
+              [],
+          };
+        }
+      }
 
       const clientId = updated.clientUserID ?? editProject.clientUserID ?? "";
       const clientObj = clients.find(
@@ -384,10 +381,13 @@ export default function AdminProjectManagement() {
       );
       setSelectedProject(updated);
       setEditProject({ ...updated });
+      setPendingImageFile(null);
       closeModal();
     } catch (err) {
       console.error("Save project failed", err);
       alert(err.message || "Save project failed");
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -995,30 +995,45 @@ export default function AdminProjectManagement() {
                   <label className="text-xs text-neutral-400">
                     Project Image
                   </label>
-                  <div className="mt-2 flex items-center gap-4">
-                    <div className="w-28 h-28 bg-[#111] border border-gray-700 rounded overflow-hidden flex items-center justify-center">
-                      {imagePreview ? (
-                        <img
-                          src={imagePreview}
-                          alt="project"
-                          className="object-cover w-full h-full"
-                        />
-                      ) : (
-                        <div className="text-xs text-gray-500">No image</div>
-                      )}
-                    </div>
-                    <div className="flex flex-col">
-                      <label className="cursor-pointer inline-flex items-center gap-2 bg-gradient-to-r from-[#4183E8] to-[#284CC4] text-white px-3 py-2 rounded text-sm">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={onImageSelected}
-                          className="hidden"
-                        />
-                        {uploadingImage ? "Uploading..." : "Upload / Change"}
-                      </label>
-                      <div className="text-xs text-neutral-400 mt-2">
-                        Recommended: 800×450, PNG/JPG.
+                  <div className="mt-2 rounded-xl border border-gray-700 bg-[#171717] p-4">
+                    <div className="flex flex-col lg:flex-row gap-4 lg:items-center">
+                      <div className="w-full lg:w-64 aspect-video bg-[#101010] border border-gray-700 rounded-lg overflow-hidden flex items-center justify-center">
+                        {imagePreview ? (
+                          <img
+                            src={imagePreview}
+                            alt="project"
+                            className="object-cover w-full h-full"
+                          />
+                        ) : (
+                          <div className="flex flex-col items-center gap-2 text-gray-500">
+                            <ImagePlus size={20} />
+                            <span className="text-xs">No image selected</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <label className="cursor-pointer inline-flex items-center gap-2 bg-gradient-to-r from-[#4183E8] to-[#284CC4] text-white px-3 py-2 rounded-md text-sm font-medium hover:opacity-90">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={onImageSelected}
+                              className="hidden"
+                            />
+                            {uploadingImage ? "Uploading..." : "Choose Image"}
+                          </label>
+                          {uploadingImage ? (
+                            <span className="text-xs text-blue-300">
+                              Upload in progress...
+                            </span>
+                          ) : null}
+                        </div>
+                        <div className="text-xs text-neutral-400 mt-3">
+                          Recommended: 1280x720 (16:9), PNG or JPG.
+                        </div>
+                        <div className="text-xs text-neutral-500 mt-1">
+                          This image is shown in project listings and details.
+                        </div>
                       </div>
                     </div>
                   </div>

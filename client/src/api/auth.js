@@ -35,3 +35,19 @@ export async function updateCommunitySetting(token, communitySettingID) {
     body: JSON.stringify({ communitySettingID }),
   });
 }
+
+export async function changeEmail(token, payload) {
+  return request("/users/me/email", {
+    method: "PATCH",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function changePassword(token, payload) {
+  return request("/users/me/password", {
+    method: "PATCH",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+}
