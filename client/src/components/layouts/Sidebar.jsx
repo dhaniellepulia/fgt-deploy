@@ -25,11 +25,16 @@ function Sidebar() {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const isClient = Number(user?.roleID) === 3;
+  const clientNavItems = [
+    // ...navItems.filter((item) => item.to === "/dashboard"),
+    ...navItems.filter((item) => item.to === "/projects"),
+    // ...navItems.filter((item) => item.to === "/sessions"),
+    // ...navItems.filter((item) => item.to === "/store"),
+    { to: "/client/community", label: "Community", icon: CommunityIcon },
+    // ...navItems.filter((item) => item.to === "/profile"),
+  ];
   const computedNavItems = isClient
-    ? [
-        ...navItems,
-        { to: "/client/community", label: "Community", icon: CommunityIcon },
-      ]
+    ? clientNavItems
     : navItems;
 
   const closeMenu = () => setOpen(false);
