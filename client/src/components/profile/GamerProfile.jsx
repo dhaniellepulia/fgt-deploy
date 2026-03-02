@@ -18,6 +18,7 @@ import MultiSelect from "../MultiSelect.jsx";
 import { fetchGenres, fetchGames } from "../../api/metadata";
 import { updateProfile } from "../../api/profile";
 import { countries } from "../../data/countries";
+import Avatar from "../../assets/avatar.png";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 const languageOptions = [
@@ -141,7 +142,7 @@ function GamerProfile() {
     ? user.profileImageUrl.startsWith("/")
       ? `${API_BASE}${user.profileImageUrl}`
       : user.profileImageUrl
-    : "../src/assets/avatar.png";
+    : Avatar;
   const gamerProfile = user?.gamerProfile ?? null;
   const details = gamerProfile?.details ?? {};
   const gamerType = gamerProfile?.gamerType ?? details?.gamerType ?? "Unknown";
