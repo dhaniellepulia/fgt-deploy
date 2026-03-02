@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import StatCard from "../StatCard.jsx";
 import { useAuth } from "../../auth/AuthContext";
+import Avatar from "../../assets/avatar.png";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
@@ -196,7 +197,7 @@ function GamerProfile() {
           </div>
 
           <img
-            src="../src/assets/avatar.png"
+            src={Avatar}
             alt="avatar"
             className="w-30 h-30 rounded-full bg-cyan-400"
           />

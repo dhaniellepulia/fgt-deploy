@@ -10,6 +10,7 @@ import ProjectsIcon from "../../assets/Projects Icon.svg";
 import SessionsIcon from "../../assets/Session Icon.svg";
 import StoreIcon from "../../assets/Store Icon.svg";
 import ProfileIcon from "../../assets/Profile Icon.svg";
+import LogoPNE from "../../assets/logo PNE.png";
 
 const navItems = [
   { to: "/dashboard", label: "User Dashboard", icon: DashboardIcon, end: true },
@@ -28,7 +29,7 @@ function Sidebar() {
   return (
     <>
       <div className="lg:hidden flex items-center justify-between bg-[#4152B3] text-white px-5 py-4">
-        <img src="../src/assets/logo PNE.png" alt="logo" className="h-8" />
+        <img src={LogoPNE} alt="logo" className="h-8" />
 
         <button onClick={() => setOpen(true)}>
           <Menu size={28} />
@@ -58,7 +59,7 @@ function Sidebar() {
         <div>
           <div className="flex items-center justify-between mb-10">
             <img
-              src="../src/assets/logo PNE.png"
+              src={LogoPNE}
               alt="logo"
               className="max-w-36"
             />

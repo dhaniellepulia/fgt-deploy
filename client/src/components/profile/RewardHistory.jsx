@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../auth/AuthContext";
+import Coin from "../../assets/coin.svg";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
@@ -96,7 +97,7 @@ function RewardHistory() {
             <div className="flex items-center justify-end gap-2 p-3">
               <span>
                 <img
-                  src="../src/assets/coin.svg"
+                  src={Coin}
                   alt="Coin"
                   className="w-4 h-4"
                 />

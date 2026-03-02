@@ -5,6 +5,9 @@ import { Link, useNavigate } from "react-router-dom";
 import LanguageSelector from "../components/LanguageSelector";
 import { useAuth } from "../auth/AuthContext";
 import { countries } from "../data/countries";
+import GradientBg from "../assets/gradient.png";
+import Asset3D2 from "../assets/3D asset 2.png";
+import LogoPNE from "../assets/logo PNE.png";
 
 function Register() {
   const { t } = useTranslation();
@@ -51,14 +54,14 @@ function Register() {
         <div className="absolute bottom-0 left-0 pointer-events-none">
           <img
             className="max-w-150 lg:max-w-225 h-auto"
-            src="../src/assets/gradient.png"
+            src={GradientBg}
             alt="gradient"
           />
         </div>
         <div className="w-full lg:w-1/2 flex items-center justify-center px-6">
           <img
             className="w-full max-w-md h-auto"
-            src="../src/assets/3D asset 2.png"
+            src={Asset3D2}
             alt="signup picture"
           />
         </div>
@@ -68,7 +71,7 @@ function Register() {
             <div className="mb-5 w-full">
               <img
                 className="w-full h-auto max-w-32"
-                src="../src/assets/logo PNE.png"
+                src={LogoPNE}
                 alt="logo"
               />
             </div>

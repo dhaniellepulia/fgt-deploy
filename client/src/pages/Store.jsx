@@ -4,6 +4,7 @@ import StoreCard from "../components/StoreCard.jsx";
 import { ChevronDown } from "lucide-react";
 import TopBar from "../components/layouts/TopBar.jsx";
 import { useAuth } from "../auth/AuthContext";
+import Coin from "../assets/coin.svg";
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 function Store() {
   const { token } = useAuth();
@@ -123,7 +124,7 @@ function Store() {
         <div className="flex flex-row items-center gap-2">
           <div className="flex flex-row items-center gap-2">
             <span className="text-[#F9B71E] font-bold">Balance</span>
-            <img src="../src/assets/coin.svg" alt="" />
+            <img src={Coin} alt="" />
             <span>{balance != null ? balance : "—"}</span>
           </div>
           <TopBar />

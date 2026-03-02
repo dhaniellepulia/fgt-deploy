@@ -1,4 +1,5 @@
 import React from "react";
+import Coin from "../assets/coin.svg";
 
 function StoreCard({ giftcard }) {
   return (
@@ -13,7 +14,7 @@ function StoreCard({ giftcard }) {
 
         <div className="flex  gap-4 text-xs text-neutral-400">
           <span className="flex items-center gap-1">
-            <img src="../src/assets/coin.svg" alt="" /> {giftcard.amount}
+            <img src={Coin} alt="" /> {giftcard.amount}
           </span>
         </div>
       </div>

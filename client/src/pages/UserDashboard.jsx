@@ -8,6 +8,7 @@ import { useAuth } from "../auth/AuthContext";
 
 import Coin from "../assets/coin.svg";
 import Time from "../assets/time.svg";
+import DiscordLogo from "../assets/discord logo.png";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 function UserDashboard() {
@@ -595,7 +596,7 @@ function UserDashboard() {
               <div className="flex flex-row items-center gap-2">
                 <img
                   className="max-w-[80px] w-full h-auto"
-                  src="../src/assets/discord logo.png"
+                  src={DiscordLogo}
                   alt="discord logo"
                 />
                 <button className="inline gap-2 rounded-md bg-yellow-400 py-1 px-3 text-sm font-semibold text-white hover:bg-yellow-300 transition">

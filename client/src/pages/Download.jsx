@@ -2,6 +2,9 @@
 import React from "react";
 import DownloadCard from "../components/DownloadCard.jsx";
 import NavBar from "../components/ExternalNavBar.jsx";
+import WindowsIcon from "../assets/windows.png";
+import AppleIcon from "../assets/icon apple 2.png";
+import AndroidIcon from "../assets/android 1.png";
 
 const DOWNLOADS_DATA = [
   {
@@ -12,7 +15,7 @@ const DOWNLOADS_DATA = [
     size: "548MB",
     icon: (
       <img
-        src="./src/assets/windows.png"
+        src={WindowsIcon}
         alt="Windows Icon"
         className="w-12 h-12 text-yellow-500"
       />
@@ -26,7 +29,7 @@ const DOWNLOADS_DATA = [
     size: "548MB",
     icon: (
       <img
-        src="./src/assets/icon apple 2.png"
+        src={AppleIcon}
         alt="Windows Icon"
         className="w-12 h-12 text-yellow-500"
       />
@@ -40,7 +43,7 @@ const DOWNLOADS_DATA = [
     size: "548MB",
     icon: (
       <img
-        src="./src/assets/icon apple 2.png"
+        src={AppleIcon}
         alt="Windows Icon"
         className="w-12 h-12 text-yellow-500"
       />
@@ -54,7 +57,7 @@ const DOWNLOADS_DATA = [
     size: "548MB",
     icon: (
       <img
-        src="./src/assets/icon apple 2.png"
+        src={AppleIcon}
         alt="Windows Icon"
         className="w-12 h-12 text-yellow-500"
       />
@@ -68,7 +71,7 @@ const DOWNLOADS_DATA = [
     size: "548MB",
     icon: (
       <img
-        src="./src/assets/android 1.png"
+        src={AndroidIcon}
         alt="Windows Icon"
         className="w-12 h-12 text-yellow-500"
       />

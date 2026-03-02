@@ -5,6 +5,8 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { useNavigate } from "react-router-dom";
 import ExternalNavBar from "../components/ExternalNavBar";
+import Gradient from "../assets/gradient.png";
+import ContactImg from "../assets/contact.png";
 
 function Contact() {
   return (
@@ -15,14 +17,14 @@ function Contact() {
         <div className="absolute bottom-0 left-0 pointer-events-none">
           <img
             className="max-w-150 lg:max-w-225 h-auto"
-            src="../src/assets/gradient.png"
+            src={Gradient}
             alt="gradient"
           />
         </div>
         <div className="w-full lg:w-1/2 flex items-center justify-center px-6">
           <img
             className="w-full max-w-md h-auto"
-            src="../src/assets/contact.png"
+            src={ContactImg}
             alt="signup picture"
           />
         </div>
