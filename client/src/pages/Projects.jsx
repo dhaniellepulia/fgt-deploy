@@ -246,7 +246,7 @@ function Projects() {
             <button
               onClick={handleCreateProject}
               disabled={saving}
-              className="bg-yellow-400 text-black px-6 py-2 rounded font-semibold disabled:opacity-60"
+              className="bg-yellow-400 text-white px-6 py-2 rounded font-semibold disabled:opacity-60"
             >
               {saving ? "Saving..." : "Create Project"}
             </button>
