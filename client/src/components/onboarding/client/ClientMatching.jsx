@@ -23,7 +23,8 @@ function ClientMatching() {
         },
       });
       await completeOnboardingStep("clientCompleted");
-      navigate("/dashboard", { replace: true });
+      // navigate("/dashboard", { replace: true });
+      navigate("/projects", { replace: true });
     } catch (err) {
       alert(err.message || "Failed to complete onboarding");
     }

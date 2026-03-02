@@ -26,6 +26,9 @@ function Login() {
       const res = await login({ email: username, password });
       if (res?.user && Number(res.user.roleID) === 1) {
         navigate("/admin/accounts");
+      } else if (res?.user && Number(res.user.roleID) === 3) {
+        // navigate("/dashboard");
+        navigate("/projects");
       } else {
         navigate("/dashboard");
       }

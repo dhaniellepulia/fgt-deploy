@@ -91,6 +91,10 @@ export default function ProtectedRoute({ children }) {
   }
 
   if (!isOnboardingIncomplete && isCurrentlyOnboarding) {
+    if (isClient) {
+      // return <Navigate to="/dashboard" replace />;
+      return <Navigate to="/projects" replace />;
+    }
     return <Navigate to="/dashboard" replace />;
   }
 
