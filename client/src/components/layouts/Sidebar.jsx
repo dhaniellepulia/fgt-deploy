@@ -10,7 +10,7 @@ import ProjectsIcon from "../../assets/Projects Icon.svg";
 import SessionsIcon from "../../assets/Session Icon.svg";
 import StoreIcon from "../../assets/Store Icon.svg";
 import ProfileIcon from "../../assets/Profile Icon.svg";
-import LogoPNE from "../../assets/logo PNE.png";
+import CommunityIcon from "../../assets/community.svg";
 
 const navItems = [
   { to: "/dashboard", label: "User Dashboard", icon: DashboardIcon, end: true },
@@ -21,15 +21,22 @@ const navItems = [
 ];
 
 function Sidebar() {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
+  const isClient = Number(user?.roleID) === 3;
+  const computedNavItems = isClient
+    ? [
+        ...navItems,
+        { to: "/client/community", label: "Community", icon: CommunityIcon },
+      ]
+    : navItems;
 
   const closeMenu = () => setOpen(false);
 
   return (
     <>
       <div className="lg:hidden flex items-center justify-between bg-[#4152B3] text-white px-5 py-4">
-        <img src={LogoPNE} alt="logo" className="h-8" />
+        <img src="../src/assets/logo PNE.png" alt="logo" className="h-8" />
 
         <button onClick={() => setOpen(true)}>
           <Menu size={28} />
@@ -59,7 +66,7 @@ function Sidebar() {
         <div>
           <div className="flex items-center justify-between mb-10">
             <img
-              src={LogoPNE}
+              src="../src/assets/logo PNE.png"
               alt="logo"
               className="max-w-36"
             />
@@ -72,7 +79,7 @@ function Sidebar() {
 
           {/* NAV LINKS */}
           <nav className="space-y-4">
-            {navItems.map(({ to, label, icon, end }) => (
+            {computedNavItems.map(({ to, label, icon, end }) => (
               <NavLink
                 key={to}
                 to={to}

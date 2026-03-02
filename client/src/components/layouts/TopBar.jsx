@@ -13,6 +13,8 @@ import { useAuth } from "../../auth/AuthContext";
 import HelpIcon from "../../assets/Help Icon.svg";
 import AvatarIcon from "../../assets/avatar.png";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+
 const helpLinks = [
   {
     label: "Contact Page",
@@ -57,10 +59,14 @@ function TopBar() {
   };
 
   const displayName =
-    user?.name ||
-    user?.profile?.firstName ||
+    `${user?.firstName || ""} ${user?.lastName || ""}`.trim() ||
     user?.email?.split("@")[0] ||
     "User";
+  const avatarSrc = user?.profileImageUrl
+    ? user.profileImageUrl.startsWith("/")
+      ? `${API_BASE}${user.profileImageUrl}`
+      : user.profileImageUrl
+    : AvatarIcon;
 
   return (
     <div className="flex flex-row items-center gap-2">
@@ -107,13 +113,16 @@ function TopBar() {
         "
         >
           <div className="flex items-center gap-5">
-            <img src={AvatarIcon} alt="avatar" className="w-8 h-8 rounded-full" />
+            <img
+              src={avatarSrc}
+              alt="avatar"
+              className="w-8 h-8 rounded-full object-cover"
+            />
 
             <span className="text-lg font-medium text-neutral-400 tracking-wide lg:block hidden">
               {displayName}
             </span>
           </div>
-
         </div>
       </div>
     </div>
