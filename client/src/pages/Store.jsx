@@ -36,10 +36,11 @@ function Store() {
           headers,
         });
         if (res.status === 401) {
-          console.debug(
-            "user-point-balance/me returned 401 — token invalid/expired",
-          );
           if (mounted) setBalance(null);
+          return;
+        }
+        if (res.status === 404) {
+          if (mounted) setBalance(0);
           return;
         }
         if (res.ok) {

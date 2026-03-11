@@ -291,77 +291,31 @@ function UserDashboard() {
     let mounted = true;
     async function loadBalance() {
       const headers = { Authorization: `Bearer ${token}` };
-
-      const tries = [
-        `${API_BASE}/user-point-balance/me`,
-        `${API_BASE}/user-point-balances/me`,
-        `${API_BASE}/users/me`,
-        `${API_BASE}/profile/me`,
-        `${API_BASE}/profile`,
-      ];
-
-      for (const url of tries) {
-        try {
-          const res = await fetch(url, { headers });
-          if (!res.ok) {
-            // log response body for debugging (server message)
-            const txt = await res.text().catch(() => "");
-            console.debug(`fetch ${url} failed:`, res.status, txt);
-            continue;
-          }
-          const data = await res.json();
-          const candidate =
-            data.currentPoints ??
-            data.current_points ??
-            data.userPointBalance?.currentPoints ??
-            data.userPointBalance?.current_points ??
-            data.item?.currentPoints ??
-            data.item?.current_points ??
-            data.items?.[0]?.currentPoints ??
-            null;
-          if (candidate != null) {
-            if (mounted) setCoins(Number(candidate));
-            return;
-          }
-          if (
-            data.userPointBalance &&
-            data.userPointBalance.currentPoints != null
-          ) {
-            if (mounted) setCoins(Number(data.userPointBalance.currentPoints));
-            return;
-          }
-        } catch (e) {
-          console.debug("fetch error", e);
-        }
-      }
-
-      // fallback: try point transactions endpoint to compute current balance
       try {
-        const res2 = await fetch(`${API_BASE}/point-transactions/me`, {
+        const res = await fetch(`${API_BASE}/user-point-balance/me`, {
           headers,
         });
-        if (res2.ok) {
-          const data2 = await res2.json();
-          const items = Array.isArray(data2.items)
-            ? data2.items
-            : data2.items
-              ? [data2.items]
-              : data2;
-          const balance = (items || []).reduce(
-            (acc, t) => acc + Number(t.pointsDelta ?? t.points ?? 0),
-            0,
-          );
-          if (mounted) setCoins(balance);
+        if (res.status === 404) {
+          if (mounted) setCoins(0);
           return;
-        } else {
-          const txt = await res2.text().catch(() => "");
-          console.debug("point-transactions/me failed:", res2.status, txt);
         }
-      } catch (e) {
-        console.debug("point-transactions/me error", e);
+        if (!res.ok) {
+          throw new Error(`user-point-balance/me failed (${res.status})`);
+        }
+        const data = await res.json();
+        const candidate =
+          data.currentPoints ??
+          data.current_points ??
+          data.userPointBalance?.currentPoints ??
+          data.userPointBalance?.current_points ??
+          data.item?.currentPoints ??
+          data.item?.current_points ??
+          null;
+        if (mounted) setCoins(candidate != null ? Number(candidate) : 0);
+      } catch (err) {
+        console.debug("loadBalance failed", err);
+        if (mounted) setCoins(0);
       }
-
-      if (mounted) setCoins(0);
     }
     loadBalance();
     return () => {

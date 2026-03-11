@@ -513,54 +513,29 @@ function GamerProfile() {
     let mounted = true;
     async function loadCoins() {
       const headers = { Authorization: `Bearer ${token}` };
-      const tries = [
-        `${API_BASE}/user-point-balance/me`,
-        `${API_BASE}/user-point-balances/me`,
-        `${API_BASE}/users/me`,
-        `${API_BASE}/profile/me`,
-        `${API_BASE}/profile`,
-      ];
-
-      for (const url of tries) {
-        try {
-          const res = await fetch(url, { headers });
-          if (!res.ok) continue;
-          const data = await res.json();
-          const candidate =
-            data.currentPoints ??
-            data.current_points ??
-            data.userPointBalance?.currentPoints ??
-            data.userPointBalance?.current_points ??
-            data.item?.currentPoints ??
-            data.item?.current_points ??
-            data.items?.[0]?.currentPoints ??
-            null;
-          if (candidate != null) {
-            if (mounted) setCoins(Number(candidate));
-            return;
-          }
-        } catch {
-          // try next endpoint
-        }
-      }
-
       try {
-        const res = await fetch(`${API_BASE}/point-transactions/me`, {
+        const res = await fetch(`${API_BASE}/user-point-balance/me`, {
           headers,
         });
-        if (!res.ok) return;
+        if (res.status === 404) {
+          if (mounted) setCoins(0);
+          return;
+        }
+        if (!res.ok) {
+          throw new Error(`user-point-balance/me failed (${res.status})`);
+        }
         const data = await res.json();
-        const items = Array.isArray(data.items)
-          ? data.items
-          : data.items
-            ? [data.items]
-            : data;
-        const balance = (items || []).reduce(
-          (acc, t) => acc + Number(t.pointsDelta ?? t.points ?? 0),
-          0,
-        );
-        if (mounted) setCoins(balance);
-      } catch {
+        const candidate =
+          data.currentPoints ??
+          data.current_points ??
+          data.userPointBalance?.currentPoints ??
+          data.userPointBalance?.current_points ??
+          data.item?.currentPoints ??
+          data.item?.current_points ??
+          null;
+        if (mounted) setCoins(candidate != null ? Number(candidate) : 0);
+      } catch (err) {
+        console.debug("loadCoins failed", err);
         if (mounted) setCoins(0);
       }
     }
