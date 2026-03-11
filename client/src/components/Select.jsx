@@ -9,6 +9,8 @@ export default function Select({
   className = "",
 }) {
   const [open, setOpen] = useState(false);
+  const [openUp, setOpenUp] = useState(false);
+  const [menuMaxHeight, setMenuMaxHeight] = useState(256);
   const ref = useRef();
 
   useEffect(() => {
@@ -31,6 +33,33 @@ export default function Select({
     setOpen(false);
   };
 
+  useEffect(() => {
+    if (!open) return;
+
+    const updateMenuPlacement = () => {
+      if (!ref.current) return;
+      const rect = ref.current.getBoundingClientRect();
+      const gutter = 8;
+      const preferredMaxHeight = 256;
+      const spaceBelow = window.innerHeight - rect.bottom - gutter;
+      const spaceAbove = rect.top - gutter;
+      const shouldOpenUp = spaceBelow < 180 && spaceAbove > spaceBelow;
+      const available = shouldOpenUp ? spaceAbove : spaceBelow;
+
+      setOpenUp(shouldOpenUp);
+      setMenuMaxHeight(Math.max(96, Math.min(preferredMaxHeight, available)));
+    };
+
+    updateMenuPlacement();
+    window.addEventListener("resize", updateMenuPlacement);
+    window.addEventListener("scroll", updateMenuPlacement, true);
+
+    return () => {
+      window.removeEventListener("resize", updateMenuPlacement);
+      window.removeEventListener("scroll", updateMenuPlacement, true);
+    };
+  }, [open]);
+
   return (
     <div ref={ref} className={`relative w-full ${className}`}>
       <div
@@ -50,7 +79,10 @@ export default function Select({
       </div>
 
       {open && (
-        <div className="absolute z-20 mt-0 w-full bg-[#353535] border border-gray-700 rounded-lg shadow-lg overflow-hidden">
+        <div
+          className={`absolute z-20 w-full bg-[#353535] border border-gray-700 rounded-lg shadow-lg overflow-y-auto overflow-x-hidden ${openUp ? "bottom-full mb-1" : "top-full mt-1"}`}
+          style={{ maxHeight: `${menuMaxHeight}px` }}
+        >
           {options.map((opt) => {
             const active = String(opt.value) === String(value);
 
