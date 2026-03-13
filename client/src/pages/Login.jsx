@@ -200,7 +200,7 @@ function Login() {
               <div className="w-1/2">
                 <button
                   type="button"
-                  className="w-full h-full min-h-20 flex items-center justify-center gap-3 rounded-md py-3 px-4 bg-linear-to-tr from-[#4184e8] to-[#284cc4] text-white font-semibold border border-white/10"
+                  className="w-full h-full min-h-15 flex items-center justify-center gap-3 rounded-md py-3 px-4 bg-linear-to-tr from-[#4184e8] to-[#284cc4] text-white font-semibold "
                 >
                   <span className="w-10 h-10 rounded-full bg-white flex items-center justify-center shrink-0">
                     <Phone className="w-5 h-5 text-[#284cc4]" />
@@ -211,7 +211,7 @@ function Login() {
               <div className="w-1/2">
                 <button
                   type="button"
-                  className="w-full h-full min-h-20 flex items-center justify-center gap-3 rounded-md py-3 px-4 bg-linear-to-r from-[#e2c03b] to-[#d89c2f] text-white font-semibold border border-white/10"
+                  className="w-full h-full min-h-15 flex items-center justify-center gap-3 rounded-md py-3 px-4 bg-linear-to-r from-[#e2c03b] to-[#d89c2f] text-white font-semibold "
                 >
                   <span className="w-10 h-10 rounded-full bg-white flex items-center justify-center shrink-0">
                     <Mail className="w-5 h-5 text-[#d2a72a]" />
