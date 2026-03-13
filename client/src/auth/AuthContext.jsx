@@ -6,6 +6,48 @@ const AuthContext = createContext();
 const STORAGE_TOKEN = "authToken";
 const STORAGE_USER = "authUser";
 
+function mergeUserState(baseUser, incomingUser) {
+  const base = baseUser || {};
+  const incoming = incomingUser || {};
+
+  const merged = {
+    ...base,
+    ...incoming,
+    onboarding: {
+      ...(base.onboarding || {}),
+      ...(incoming.onboarding || {}),
+    },
+  };
+
+  if (
+    (!Array.isArray(incoming.motivations) || incoming.motivations.length === 0) &&
+    Array.isArray(base.motivations) &&
+    base.motivations.length > 0
+  ) {
+    merged.motivations = base.motivations;
+  }
+
+  if (
+    (!incoming.preferences ||
+      (typeof incoming.preferences === "object" &&
+        Object.keys(incoming.preferences).length === 0)) &&
+    base.preferences
+  ) {
+    merged.preferences = base.preferences;
+  }
+
+  if (
+    (!incoming.gamerProfile ||
+      (typeof incoming.gamerProfile === "object" &&
+        Object.keys(incoming.gamerProfile).length === 0)) &&
+    base.gamerProfile
+  ) {
+    merged.gamerProfile = base.gamerProfile;
+  }
+
+  return merged;
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
@@ -80,13 +122,10 @@ export function AuthProvider({ children }) {
       .me(storedToken)
       .then((res) => {
         if (res?.user) {
-          const merged = {
-            ...res.user,
-            onboarding: {
-              ...(res.user.onboarding || {}),
-              ...(storedOnboarding || {}),
-            },
-          };
+          const merged = mergeUserState(
+            { onboarding: storedOnboarding || {} },
+            res.user,
+          );
           localStorage.setItem(STORAGE_USER, JSON.stringify(merged));
           setUser(merged);
         }
@@ -156,13 +195,17 @@ export function AuthProvider({ children }) {
       const res = await authApi.updateOnboarding(token, payload);
       if (res?.user) {
         const stored = localStorage.getItem(STORAGE_USER);
-        const storedOnboarding = stored ? JSON.parse(stored)?.onboarding : null;
-        const merged = {
-          ...res.user,
-          onboarding: {
-            ...(storedOnboarding || {}),
-            [step]: true,
-          },
+        let storedUser = null;
+        try {
+          storedUser = stored ? JSON.parse(stored) : null;
+        } catch {
+          storedUser = null;
+        }
+
+        const merged = mergeUserState(storedUser || {}, res.user);
+        merged.onboarding = {
+          ...(merged.onboarding || {}),
+          [step]: true,
         };
         localStorage.setItem(STORAGE_USER, JSON.stringify(merged));
         setUser(merged);
