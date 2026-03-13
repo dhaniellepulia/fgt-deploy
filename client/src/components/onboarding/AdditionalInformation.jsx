@@ -7,6 +7,7 @@ import { updateProfile } from "../../api/profile";
 import { countries } from "../../data/countries";
 import Select from "../Select.jsx";
 import MultiSelect from "../MultiSelect.jsx";
+import OverlayModal from "../OverlayModal.jsx";
 
 const languageOptions = [
   "English",
@@ -55,6 +56,7 @@ function AdditionalInformation() {
   const [genres, setGenres] = useState([]);
   const [games, setGames] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -103,8 +105,34 @@ function AdditionalInformation() {
     }
   }, [navigate, user]);
 
+  useEffect(() => {
+    if (!user) return;
+    const parsedBirth = user.birthdate ? new Date(user.birthdate) : null;
+
+    setFormData((prev) => ({
+      ...prev,
+      firstName: user.firstName || "",
+      lastName: user.lastName || "",
+      phoneNumber: user.phoneNumber || "",
+      discordID: user.discordID || "",
+      platformLanguageID: user.platformLanguageID || 1,
+      birthDay: parsedBirth ? parsedBirth.getUTCDate() : "",
+      birthMonth: parsedBirth ? parsedBirth.getUTCMonth() + 1 : "",
+      birthYear: parsedBirth ? parsedBirth.getUTCFullYear() : "",
+      countryOriginCode: user.countryOriginCode || "",
+      countryResidenceCode: user.countryResidenceCode || "",
+      gender: user.gender || "",
+      spokenLanguages: Array.isArray(user.spokenLanguages)
+        ? user.spokenLanguages
+        : [],
+      experienceLevel: user.experienceLevel || "",
+      recentGameID: user.recentGameID || "",
+    }));
+  }, [user]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
+    setSaveError("");
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -119,8 +147,27 @@ function AdditionalInformation() {
   };
 
   const handleSave = async () => {
+    const missingRequired =
+      !String(formData.firstName || "").trim() ||
+      !String(formData.lastName || "").trim() ||
+      !formData.birthDay ||
+      !formData.birthMonth ||
+      !formData.birthYear ||
+      !String(formData.countryOriginCode || "").trim() ||
+      !String(formData.countryResidenceCode || "").trim() ||
+      !String(formData.gender || "").trim() ||
+      !Array.isArray(formData.spokenLanguages) ||
+      formData.spokenLanguages.length === 0 ||
+      !String(formData.experienceLevel || "").trim();
+
+    if (missingRequired) {
+      setSaveError("Please complete all required fields marked with *.");
+      return;
+    }
+
     try {
       setSaving(true);
+      setSaveError("");
       const birthdate = toBirthdate();
 
       const payload = {
@@ -147,7 +194,7 @@ function AdditionalInformation() {
       await completeOnboardingStep("profileCompleted");
       navigate("/onboarding/questionnaire");
     } catch (err) {
-      alert(err.message || "Failed to save profile");
+      setSaveError(err.message || "Failed to save profile");
     } finally {
       setSaving(false);
     }
@@ -171,6 +218,7 @@ function AdditionalInformation() {
                 type="text"
                 name="firstName"
                 placeholder="First Name"
+                value={formData.firstName}
                 className={fieldClass}
                 onChange={handleChange}
               />
@@ -184,6 +232,7 @@ function AdditionalInformation() {
                 type="text"
                 name="lastName"
                 placeholder="Last Name"
+                value={formData.lastName}
                 className={fieldClass}
                 onChange={handleChange}
               />
@@ -201,6 +250,7 @@ function AdditionalInformation() {
                   type="text"
                   name="phoneNumber"
                   placeholder="Phone Number"
+                  value={formData.phoneNumber}
                   className={`${fieldClass} border-0 rounded-none`}
                   onChange={handleChange}
                 />
@@ -213,6 +263,7 @@ function AdditionalInformation() {
                 type="text"
                 name="discordID"
                 placeholder="yourusername000"
+                value={formData.discordID}
                 className={fieldClass}
                 onChange={handleChange}
               />
@@ -364,9 +415,10 @@ function AdditionalInformation() {
               </label>
               <MultiSelect
                 value={formData.spokenLanguages}
-                onChange={(values) =>
-                  setFormData((prev) => ({ ...prev, spokenLanguages: values }))
-                }
+                onChange={(values) => {
+                  setSaveError("");
+                  setFormData((prev) => ({ ...prev, spokenLanguages: values }));
+                }}
                 options={languageOptions.map((language) => ({
                   value: language,
                   label: language,
@@ -447,13 +499,31 @@ function AdditionalInformation() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="bg-gradient-to-b from-blue-500 to-blue-700 hover:from-blue-400 hover:to-blue-600 text-white font-bold py-2 px-12 rounded active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full md:w-auto bg-gradient-to-b from-blue-500 to-blue-700 hover:from-blue-400 hover:to-blue-600 text-white font-bold py-2 px-12 rounded active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {saving ? "Saving..." : "Save"}
             </button>
           </div>
         </section>
       </div>
+
+      <OverlayModal
+        isOpen={Boolean(saveError)}
+        onClose={() => setSaveError("")}
+        title="Cannot Save Yet"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-300">{saveError}</p>
+          <div className="flex justify-end">
+            <button
+              onClick={() => setSaveError("")}
+              className="bg-gradient-to-r from-[#4183E8] to-[#284CC4] text-white px-4 py-2 rounded font-semibold"
+            >
+              Okay
+            </button>
+          </div>
+        </div>
+      </OverlayModal>
     </div>
   );
 }

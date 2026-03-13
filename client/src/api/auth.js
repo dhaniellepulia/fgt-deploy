@@ -7,10 +7,24 @@ export async function login({ email, password }) {
   });
 }
 
-export async function register({ email, password, roleID }) {
+export async function register({
+  email,
+  password,
+  roleID,
+  firstName,
+  lastName,
+  countryResidenceCode,
+}) {
   return request("/auth/register", {
     method: "POST",
-    body: JSON.stringify({ email, password, roleID }),
+    body: JSON.stringify({
+      email,
+      password,
+      roleID,
+      firstName,
+      lastName,
+      countryResidenceCode,
+    }),
   });
 }
 

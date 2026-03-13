@@ -1,7 +1,8 @@
 import "./App.css";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login.jsx";
 import ProtectedRoute from "./auth/ProtectedRoute.jsx";
+import { useAuth } from "./auth/AuthContext.jsx";
 import AppLayout from "./components/layouts/AppLayout.jsx";
 import Dashboard from "./pages/UserDashboard.jsx";
 import Projects from "./pages/Projects.jsx";
@@ -42,6 +43,18 @@ import RegistrationApproval from "./pages/AdminRegistrationApproval.jsx";
 import ProjectManagement from "./pages/AdminProjectManagement.jsx";
 import Reports from "./pages/AdminReports.jsx";
 import PendingAccount from "./pages/PendingAccount.jsx";
+
+function RoleHomeRedirect() {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  if (!user) return <Navigate to="/" replace />;
+
+  const roleID = Number(user.roleID);
+  if (roleID === 1) return <Navigate to="/admin/accounts" replace />;
+  if (roleID === 3) return <Navigate to="/projects" replace />;
+  return <Navigate to="/dashboard" replace />;
+}
+
 function App() {
   return (
     <Routes>
@@ -144,6 +157,8 @@ function App() {
         <Route path="/admin/projects" element={<ProjectManagement />} />
         <Route path="/admin/reports" element={<Reports />} />
       </Route>
+
+      <Route path="*" element={<RoleHomeRedirect />} />
     </Routes>
   );
 }

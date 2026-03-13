@@ -600,7 +600,7 @@ function GamerProfile() {
       </div>
 
       {/* Motivations */}
-      <section className="rounded-xl bg-[#252525] p-15 min-h-[180px]">
+      <section className="rounded-xl bg-[#252525] p-6 lg:p-15 min-h-[180px]">
         <h2 className="text-white font-semibold mb-10">
           Your Gamer Motivations
         </h2>
@@ -700,7 +700,7 @@ function GamerProfile() {
       </section>
 
       {/* Communities */}
-      <section className="rounded-xl bg-[#252525] p-6 space-y-4">
+      <section className="rounded-xl bg-[#252525] p-6 lg:p-15 space-y-4">
         <div>
           <h2 className="text-white font-semibold">Communities</h2>
           <p className="text-sm text-neutral-400 mt-1">

@@ -6,8 +6,12 @@ export default function AdminRoute({ children }) {
   if (loading) return null;
   if (!user) return <Navigate to="/" replace />;
 
-  const isAdmin = user.roleID && Number(user.roleID) === 1;
-  if (!isAdmin) return <Navigate to="/" replace />;
+  const roleID = Number(user.roleID);
+  const isAdmin = roleID === 1;
+  if (!isAdmin) {
+    const fallbackPath = roleID === 3 ? "/projects" : "/dashboard";
+    return <Navigate to={fallbackPath} replace />;
+  }
 
   return children;
 }

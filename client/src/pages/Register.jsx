@@ -1,5 +1,5 @@
 // Register Page
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 import LanguageSelector from "../components/LanguageSelector";
@@ -12,17 +12,52 @@ import LogoPNE from "../assets/logo PNE.png";
 function Register() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { register } = useAuth();
+  const { user, token, loading, register } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [roleID, setRoleID] = useState(2);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [countryResidenceCode, setCountryResidenceCode] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (loading) return;
+    if (!token) {
+      if (user && Number(user.userStatusID) === 4) {
+        navigate("/pending", { replace: true });
+      }
+      return;
+    }
+    if (!user) return;
+
+    const roleID = Number(user.roleID);
+    if (roleID === 1) {
+      navigate("/admin/accounts", { replace: true });
+      return;
+    }
+    if (roleID === 3) {
+      navigate("/projects", { replace: true });
+      return;
+    }
+    navigate("/dashboard", { replace: true });
+  }, [loading, navigate, token, user]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submitting) return;
 
     try {
-      const res = await register({ email, password, roleID });
+      setSubmitting(true);
+      const res = await register({
+        email,
+        password,
+        roleID,
+        firstName,
+        lastName,
+        countryResidenceCode,
+      });
       console.log("register response:", res);
       if (res?.pending) {
         navigate("/pending");
@@ -31,6 +66,8 @@ function Register() {
       }
     } catch (err) {
       alert(err.message || "Registration failed");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -86,6 +123,7 @@ function Register() {
               <div className="flex gap-3">
                 <button
                   type="button"
+                  disabled={submitting}
                   onClick={() => setRoleID(2)}
                   className={`px-4 py-2 rounded-md text-sm font-semibold border ${
                     roleID === 2
@@ -97,6 +135,7 @@ function Register() {
                 </button>
                 <button
                   type="button"
+                  disabled={submitting}
                   onClick={() => setRoleID(3)}
                   className={`px-4 py-2 rounded-md text-sm font-semibold border ${
                     roleID === 3
@@ -117,6 +156,7 @@ function Register() {
                 <input
                   type="email"
                   required
+                  disabled={submitting}
                   className="mt-1 w-full px-3 py-3 border bg-white text-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   onChange={(e) => setEmail(e.target.value)}
                 />
@@ -129,18 +169,32 @@ function Register() {
                 <input
                   type="password"
                   required
+                  disabled={submitting}
                   className="mt-1 w-full px-3 py-3 border bg-white text-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
 
               <div>
-                <label className="block text-lg font-medium ">
-                  {t("signup.label_fullname")}
-                </label>
+                <label className="block text-lg font-medium ">First Name</label>
                 <input
-                  type="input"
+                  type="text"
                   required
+                  disabled={submitting}
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  className="mt-1 w-full px-3 py-3 border bg-white text-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-lg font-medium ">Last Name</label>
+                <input
+                  type="text"
+                  required
+                  disabled={submitting}
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
                   className="mt-1 w-full px-3 py-3 border bg-white text-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -151,6 +205,9 @@ function Register() {
                 </label>
                 <select
                   required
+                  disabled={submitting}
+                  value={countryResidenceCode}
+                  onChange={(e) => setCountryResidenceCode(e.target.value)}
                   className="mt-1 w-full px-3 py-3 border bg-white text-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Select a country</option>
@@ -162,8 +219,11 @@ function Register() {
                 </select>
               </div>
 
-              <button className="w-full mt-1 py-3 px-4  bg-linear-to-tr from-[#4184e8] to-[#284cc4] text-white rounded-md font-semibold hover:bg-blue-700">
-                {t("signup.button_signup")}
+              <button
+                disabled={submitting}
+                className="w-full mt-1 py-3 px-4 bg-linear-to-tr from-[#4184e8] to-[#284cc4] text-white rounded-md font-semibold hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {submitting ? "Signing up..." : t("signup.button_signup")}
               </button>
             </form>
 

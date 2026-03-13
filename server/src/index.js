@@ -83,7 +83,8 @@ function signToken(user) {
 app.get("/health", (req, res) => res.json({ ok: true }));
 
 app.post("/auth/register", async (req, res) => {
-  const { email, password, roleID } = req.body;
+  const { email, password, roleID, firstName, lastName, countryResidenceCode } =
+    req.body;
   if (!email || !password) {
     return res.status(400).json({ error: "Email and password required" });
   }
@@ -100,6 +101,11 @@ app.post("/auth/register", async (req, res) => {
       roleID: roleID ? BigInt(roleID) : DEFAULT_ROLE_ID,
       userStatusID: SELF_REGISTER_USER_STATUS_ID,
       communitySettingID: DEFAULT_COMMUNITY_SETTING_ID,
+      firstName: firstName ? String(firstName).trim() : null,
+      lastName: lastName ? String(lastName).trim() : null,
+      countryResidenceCode: countryResidenceCode
+        ? String(countryResidenceCode).toUpperCase()
+        : null,
     },
     select: {
       userID: true,
@@ -148,6 +154,8 @@ app.post("/auth/login", async (req, res) => {
     where: { email, deletedAt: null },
   });
 
+  if (!user) return res.status(401).json({ error: "Invalid credentials" });
+
   if (Number(user.userStatusID) === SELF_REGISTER_USER_STATUS_ID) {
     return res
       .status(403)
@@ -163,7 +171,6 @@ app.post("/auth/login", async (req, res) => {
       .status(403)
       .json({ error: "Account not active", userStatusID: user.userStatusID });
   }
-  if (!user) return res.status(401).json({ error: "Invalid credentials" });
 
   const ok = await bcrypt.compare(password, user.passwordHash);
   if (!ok) return res.status(401).json({ error: "Invalid credentials" });

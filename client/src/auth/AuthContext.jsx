@@ -97,6 +97,36 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    const onStorage = (event) => {
+      if (event.key !== STORAGE_TOKEN && event.key !== STORAGE_USER) return;
+
+      const nextToken = localStorage.getItem(STORAGE_TOKEN);
+      const nextUserRaw = localStorage.getItem(STORAGE_USER);
+      const currentUserRaw = user ? JSON.stringify(user) : null;
+
+      if (!nextToken) {
+        clearSession();
+        return;
+      }
+
+      if (nextToken !== token) {
+        setToken(nextToken);
+      }
+
+      if (nextUserRaw !== currentUserRaw) {
+        try {
+          setUser(nextUserRaw ? JSON.parse(nextUserRaw) : null);
+        } catch {
+          setUser(null);
+        }
+      }
+    };
+
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [token, user]);
+
   const completeOnboardingStep = async (step) => {
     setUser((prev) => {
       if (!prev) return prev;

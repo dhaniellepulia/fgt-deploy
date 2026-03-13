@@ -70,13 +70,13 @@ function TopBar() {
 
   return (
     <div className="flex flex-row items-center gap-2">
-      <div className="relative">
+      <div className="relative min-w-[96px]">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-2 px-3 py-1 text-white transition-colors hover:bg-white/10 rounded-md cursor-pointer focus:outline-none"
+          className="flex h-10 w-full items-center gap-2 px-4 text-white transition-colors hover:bg-white/10 rounded-md cursor-pointer focus:outline-none"
         >
           <img src={HelpIcon} alt="Help" className="w-5 h-5" />
-          <span className="flex items-center gap-1">Help</span>
+          <span className="flex-1 text-left">Help</span>
         </button>
 
         {isOpen && (

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import ProjectCard from "../components/ProjectCard.jsx";
 import TopBar from "../components/layouts/TopBar.jsx";
+import ConfirmDialog from "../components/ConfirmDialog.jsx";
 import { fetchProjects, joinProject } from "../api/projects";
 import { useAuth } from "../auth/AuthContext";
 import {
@@ -62,6 +63,8 @@ function Projects() {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [joiningProjectID, setJoiningProjectID] = useState(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState(null);
   const [projectForm, setProjectForm] = useState({
     title: "",
     description: "",
@@ -149,7 +152,6 @@ function Projects() {
   };
 
   const handleDeleteProject = async (projectID) => {
-    if (!window.confirm("Delete this project?")) return;
     try {
       await deleteClientProject(projectID, token);
       const updated = clientProjects.filter((p) => p.projectID !== projectID);
@@ -157,7 +159,15 @@ function Projects() {
       setProjects(mapClientProjectsToItems(updated));
     } catch (err) {
       alert(err.message || "Failed to delete project");
+    } finally {
+      setConfirmDeleteOpen(false);
+      setProjectToDelete(null);
     }
+  };
+
+  const requestDeleteProject = (project) => {
+    setProjectToDelete(project);
+    setConfirmDeleteOpen(true);
   };
 
   const handleJoinProject = async (projectID) => {
@@ -269,7 +279,7 @@ function Projects() {
                   </p>
                 </div>
                 <button
-                  onClick={() => handleDeleteProject(project.projectID)}
+                  onClick={() => requestDeleteProject(project)}
                   className="text-xs text-red-400"
                 >
                   Delete
@@ -345,6 +355,23 @@ function Projects() {
           )}
         </>
       )}
+
+      <ConfirmDialog
+        isOpen={confirmDeleteOpen}
+        title="Delete Project"
+        message={`Delete "${projectToDelete?.title || "this project"}"? This cannot be undone.`}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        danger
+        onCancel={() => {
+          setConfirmDeleteOpen(false);
+          setProjectToDelete(null);
+        }}
+        onConfirm={() => {
+          if (!projectToDelete?.projectID) return;
+          handleDeleteProject(projectToDelete.projectID);
+        }}
+      />
     </div>
   );
 }
